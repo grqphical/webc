@@ -33,6 +33,7 @@ const (
 	TK_LBRACE    TokenType = "{"
 	TK_RBRACE    TokenType = "}"
 	TK_SEMICOLON TokenType = ";"
+	TK_EQUAL     TokenType = "="
 	TK_EOF       TokenType = "EOF"
 )
 
@@ -143,6 +144,13 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 				Literal: ";",
 			})
 			l.head++
+		case '=':
+			l.tokens = append(l.tokens, Token{
+				Type:    TK_EQUAL,
+				Literal: "=",
+			})
+			l.head++
+
 		default:
 			if isLetter(tok) {
 				l.makeLiteral()

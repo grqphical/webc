@@ -87,7 +87,6 @@ func (m *WASMModule) generateFunctionSection() {
 func (m *WASMModule) generateExportSection() {
 	exportPayload := bytes.Buffer{}
 	exportPayload.Write(encodeULEB128(1)) // Number of exports
-	// Name "main"
 	exportPayload.Write(encodeULEB128(4)) // String length
 	exportPayload.WriteString("main")
 	exportPayload.WriteByte(0x00)         // Export kind: Function
@@ -100,17 +99,32 @@ func (m *WASMModule) generateCodeSection() error {
 	codePayload.Write(encodeULEB128(1)) // number of function bodies
 
 	body := bytes.Buffer{}
-	body.Write(encodeULEB128(0)) // local variable count = 0
+	body.Write(encodeULEB128(1))                                               // 1 group of locals
+	body.Write(encodeULEB128(uint32(len(m.program.Functions[0].SymbolTable)))) // local variable count
+	body.WriteByte(0x7F)                                                       // Type i32
 
 	mainFunc := m.program.Functions[0]
 	for _, stmt := range mainFunc.Body.Statements {
 		if retStmt, ok := stmt.(parser.ReturnStmt); ok {
-			body.WriteByte(0x41) // Opcode: i32.const
-
-			returnValue, _ := strconv.Atoi(retStmt.Value.(parser.Constant).Value)
-
-			body.Write(encodeSLEB128(int32(returnValue))) // value to return
+			if _, ok := retStmt.Value.(parser.Constant); ok {
+				body.WriteByte(0x41) // Opcode: i32.const
+				returnValue, _ := strconv.Atoi(retStmt.Value.(parser.Constant).Value)
+				body.Write(encodeSLEB128(int32(returnValue))) // value to return
+			} else if varAccess, ok := retStmt.Value.(parser.VariableAccess); ok {
+				body.WriteByte(0x20) // Opcode: local.get
+				body.Write(encodeULEB128(uint32(varAccess.Index)))
+			}
 			body.WriteByte(0x0B)
+		} else if varDefineStmt, ok := stmt.(parser.VariableDefineStmt); ok {
+			variableValue, _ := strconv.Atoi(varDefineStmt.Value.(parser.Constant).Value)
+			body.WriteByte(0x41) // Opcode: i32.const
+			body.Write(encodeSLEB128(int32(variableValue)))
+
+			variableIndex := varDefineStmt.Symbol.Index
+
+			body.WriteByte(0x21) // local.set
+			body.Write(encodeULEB128(uint32(variableIndex)))
+
 		} else {
 			return errors.New("unsupported statement")
 		}
