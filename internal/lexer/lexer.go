@@ -1,9 +1,15 @@
 package lexer
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func isLetter(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+}
+
+func isNumber(c byte) bool {
+	return c >= '0' && c <= '9'
 }
 
 type LexerError struct {
@@ -81,6 +87,20 @@ func (l *Lexer) makeLiteral() {
 
 }
 
+func (l *Lexer) makeNumber() {
+	literal := ""
+
+	for isNumber(l.getCurrentChar()) {
+		literal += string(l.getCurrentChar())
+		l.head++
+	}
+
+	l.tokens = append(l.tokens, Token{
+		Type:    TK_NUMBER,
+		Literal: literal,
+	})
+}
+
 func (l *Lexer) ParseSource() ([]Token, error) {
 	for l.head < len(l.source) {
 		tok := l.getCurrentChar()
@@ -111,8 +131,10 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 				Literal: ")",
 			})
 		default:
-			if (tok >= 'a' && tok <= 'z') || (tok >= 'A' && tok <= 'Z') {
+			if isLetter(tok) {
 				l.makeLiteral()
+			} else if isNumber(tok) {
+				l.makeNumber()
 			} else {
 				return nil, LexerError{
 					Line:    l.lineCount,
