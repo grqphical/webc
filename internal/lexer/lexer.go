@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"fmt"
+	"strings"
 )
 
 func isLetter(c byte) bool {
@@ -88,16 +89,16 @@ func (l *Lexer) makeLiteral() {
 }
 
 func (l *Lexer) makeNumber() {
-	literal := ""
+	var literal strings.Builder
 
 	for isNumber(l.getCurrentChar()) {
-		literal += string(l.getCurrentChar())
+		literal.WriteString(string(l.getCurrentChar()))
 		l.head++
 	}
 
 	l.tokens = append(l.tokens, Token{
 		Type:    TK_NUMBER,
-		Literal: literal,
+		Literal: literal.String(),
 	})
 }
 
@@ -107,29 +108,41 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 
 		switch tok {
 		case ' ', '\t':
+			l.head++
 
 		case '\n':
 			l.lineCount += 1
+			l.head++
 		case '{':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_LBRACE,
 				Literal: "{",
 			})
+			l.head++
 		case '}':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_RBRACE,
 				Literal: "}",
 			})
+			l.head++
 		case '(':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_LPAREN,
 				Literal: "(",
 			})
+			l.head++
 		case ')':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_RPAREN,
 				Literal: ")",
 			})
+			l.head++
+		case ';':
+			l.tokens = append(l.tokens, Token{
+				Type:    TK_SEMICOLON,
+				Literal: ";",
+			})
+			l.head++
 		default:
 			if isLetter(tok) {
 				l.makeLiteral()
@@ -138,13 +151,17 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 			} else {
 				return nil, LexerError{
 					Line:    l.lineCount,
-					Message: "illegal token",
+					Message: fmt.Sprintf("illegal token '%c'", tok),
 				}
 			}
 		}
 
-		l.head++
 	}
+
+	l.tokens = append(l.tokens, Token{
+		Type:    TK_EOF,
+		Literal: "EOF",
+	})
 
 	return l.tokens, nil
 }
