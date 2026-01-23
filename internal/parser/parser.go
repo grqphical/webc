@@ -184,6 +184,24 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) Node {
 	return stmt
 }
 
+func (p *Parser) parseBinaryExpression(f *FunctionDecl, a Node) Node {
+	p.head++
+
+	operation := p.getCurrentToken().Literal
+	if p.peekToken().Type != lexer.TK_IDENT && p.peekToken().Type != lexer.TK_NUMBER {
+		fmt.Printf("error parsing expression, expected number or identifier\n")
+		return nil
+	}
+	p.head++
+
+	b := p.parseExpression(f)
+	return BinaryExpression{
+		a,
+		operation,
+		b,
+	}
+}
+
 func (p *Parser) parseExpression(f *FunctionDecl) Node {
 	currentToken := p.getCurrentToken()
 
@@ -193,21 +211,7 @@ func (p *Parser) parseExpression(f *FunctionDecl) Node {
 			return Constant{Value: currentToken.Literal}
 		} else if p.peekToken().Type == lexer.TK_DASH {
 			a := Constant{Value: currentToken.Literal}
-			p.head++
-
-			operation := p.getCurrentToken().Literal
-			if p.peekToken().Type != lexer.TK_IDENT && p.peekToken().Type != lexer.TK_NUMBER {
-				fmt.Printf("error parsing expression, expected number or identifier\n")
-				return nil
-			}
-			p.head++
-
-			b := p.parseExpression(f)
-			return BinaryExpression{
-				a,
-				operation,
-				b,
-			}
+			return p.parseBinaryExpression(f, a)
 		}
 	case lexer.TK_IDENT:
 		if p.peekToken().Type == lexer.TK_SEMICOLON {
@@ -224,21 +228,7 @@ func (p *Parser) parseExpression(f *FunctionDecl) Node {
 				return nil
 			}
 			a := VariableAccess{Index: sym.Index}
-			p.head++
-
-			operation := p.getCurrentToken().Literal
-			if p.peekToken().Type != lexer.TK_IDENT && p.peekToken().Type != lexer.TK_NUMBER {
-				fmt.Printf("error parsing expression, expected number or identifier\n")
-				return nil
-			}
-			p.head++
-
-			b := p.parseExpression(f)
-			return BinaryExpression{
-				a,
-				operation,
-				b,
-			}
+			return p.parseBinaryExpression(f, a)
 		}
 	case lexer.TK_DASH:
 		expr := UnaryExpression{Operation: "-"}
