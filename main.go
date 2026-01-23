@@ -27,7 +27,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	//fmt.Printf("tokens: %+v\n", tokens)
 
 	parser := parser.New(tokens)
 	program, err := parser.Parse()

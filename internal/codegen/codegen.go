@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -19,7 +20,8 @@ const (
 )
 
 const (
-	OpCodeReturn            byte = 0x0B
+	OpCodeEnd               byte = 0x0B
+	OpCodeReturn            byte = 0x0F
 	OpCodeI32Const          byte = 0x41
 	OpCodeLocalGet          byte = 0x20
 	OpCodeLocalSet          byte = 0x21
@@ -29,6 +31,7 @@ const (
 	OpCodeI32SignedDivision byte = 0x6D
 )
 
+// Helper: Encodes unsigned integers (size, counts, indices)
 func encodeULEB128(n uint32) []byte {
 	var res []byte
 	for {
@@ -43,6 +46,7 @@ func encodeULEB128(n uint32) []byte {
 	return res
 }
 
+// Helper: Encodes signed integers (constants)
 func encodeSLEB128(n int32) []byte {
 	var res []byte
 	for {
@@ -76,101 +80,158 @@ func (m *WASMModule) writeSection(id byte, payload []byte) {
 	m.buffer.Write(payload)
 }
 
+// 1. Type Section
+// Defines function signatures. For now, we assume all functions are () -> i32
 func (m *WASMModule) generateTypeSection() {
 	typePayload := bytes.Buffer{}
-	typePayload.Write(encodeULEB128(uint32(len(m.program.Functions)))) // num of types (functions)
-	typePayload.WriteByte(0x60)                                        // identifies it as a function
-	typePayload.Write(encodeULEB128(0))                                // Param count: 0
-	typePayload.Write(encodeULEB128(1))                                // Result count: 1
-	typePayload.WriteByte(0x7F)                                        // type: i32
+
+	// We only define ONE signature type: () -> i32
+	// Even if we have 10 functions, if they all share this signature, we only need one type def.
+	typePayload.Write(encodeULEB128(1)) // count of types
+
+	typePayload.WriteByte(0x60)         // function type
+	typePayload.Write(encodeULEB128(0)) // Param count: 0
+	typePayload.Write(encodeULEB128(1)) // Result count: 1
+	typePayload.WriteByte(0x7F)         // result type: i32
 
 	m.writeSection(SecType, typePayload.Bytes())
-
 }
 
+// 2. Function Section
+// Maps every function body (in Code section) to a Type signature (in Type section)
 func (m *WASMModule) generateFunctionSection() {
 	funcPayload := bytes.Buffer{}
-	funcPayload.Write(encodeULEB128(1)) // Number of functions
-	funcPayload.Write(encodeULEB128(0)) // Index of the type defined above
+	count := uint32(len(m.program.Functions))
+
+	funcPayload.Write(encodeULEB128(count))
+
+	// For every function in our program, assign it Type Index 0 (which is () -> i32)
+	for range m.program.Functions {
+		funcPayload.Write(encodeULEB128(0))
+	}
+
 	m.writeSection(SecFunction, funcPayload.Bytes())
 }
 
+// 3. Export Section
+// Exports the function named "main" so the host (JS) can call it
 func (m *WASMModule) generateExportSection() {
 	exportPayload := bytes.Buffer{}
 	exportPayload.Write(encodeULEB128(1)) // Number of exports
-	exportPayload.Write(encodeULEB128(4)) // String length
-	exportPayload.WriteString("main")
-	exportPayload.WriteByte(0x00)         // Export kind: Function
-	exportPayload.Write(encodeULEB128(0)) // Function index: 0
+
+	// Find the index of the "main" function
+	mainIndex := 0
+	foundMain := false
+	for i, f := range m.program.Functions {
+		if f.Name == "main" {
+			mainIndex = i
+			foundMain = true
+			break
+		}
+	}
+
+	if !foundMain {
+		fmt.Println("Warning: No 'main' function found to export.")
+	}
+
+	exportPayload.Write(encodeULEB128(4))                 // Name length
+	exportPayload.WriteString("main")                     // Name
+	exportPayload.WriteByte(0x00)                         // Export kind: Function
+	exportPayload.Write(encodeULEB128(uint32(mainIndex))) // Function Index
+
 	m.writeSection(SecExport, exportPayload.Bytes())
 }
 
-func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffer) {
-	if constant, ok := value.(parser.Constant); ok {
-		body.WriteByte(OpCodeI32Const)
-		intValue, _ := strconv.Atoi(constant.Value)
-
-		body.Write(encodeSLEB128(int32(intValue)))
-	} else if varAccess, ok := value.(parser.VariableAccess); ok {
-		body.WriteByte(OpCodeLocalGet)
-		body.Write(encodeULEB128(uint32(varAccess.Index)))
-
-	} else if unary, ok := value.(parser.UnaryExpression); ok {
-		// negate valuing by generating code for 0 - value
-		body.WriteByte(OpCodeI32Const)
-		body.Write(encodeSLEB128(0))
-		m.generateExpressionCode(unary.Value, body)
-		body.WriteByte(OpCodeI32Sub)
-	} else if binaryExpr, ok := value.(parser.BinaryExpression); ok {
-		m.generateExpressionCode(binaryExpr.A, body)
-		m.generateExpressionCode(binaryExpr.B, body)
-		switch binaryExpr.Operation {
-		case "-":
-			body.WriteByte(OpCodeI32Sub)
-		case "+":
-			body.WriteByte(OpCodeI32Add)
-		case "/":
-			body.WriteByte(OpCodeI32SignedDivision)
-		case "*":
-			body.WriteByte(OpCodeI32Mul)
-		}
-	}
-
-}
-
+// 4. Code Section
+// The actual compiled machine code
 func (m *WASMModule) generateCodeSection() error {
 	codePayload := bytes.Buffer{}
-	codePayload.Write(encodeULEB128(1)) // number of function bodies
+	codePayload.Write(encodeULEB128(uint32(len(m.program.Functions))))
 
-	body := bytes.Buffer{}
-	body.Write(encodeULEB128(1))                                               // 1 group of locals
-	body.Write(encodeULEB128(uint32(len(m.program.Functions[0].SymbolTable)))) // local variable count
-	body.WriteByte(0x7F)                                                       // Type i32
+	for _, function := range m.program.Functions {
+		funcBody := bytes.Buffer{}
 
-	mainFunc := m.program.Functions[0]
-	for _, stmt := range mainFunc.Body.Statements {
-		if retStmt, ok := stmt.(parser.ReturnStmt); ok {
-			m.generateExpressionCode(retStmt.Value, &body)
-			body.WriteByte(OpCodeReturn)
-
-		} else if varDefineStmt, ok := stmt.(parser.VariableDefineStmt); ok {
-			m.generateExpressionCode(varDefineStmt.Value, &body)
-			variableIndex := varDefineStmt.Symbol.Index
-
-			body.WriteByte(OpCodeLocalSet)
-			body.Write(encodeULEB128(uint32(variableIndex)))
-
+		// --- Local Variable Declarations ---
+		localCount := uint32(len(function.SymbolTable))
+		if localCount > 0 {
+			funcBody.Write(encodeULEB128(1))          // 1 group of locals
+			funcBody.Write(encodeULEB128(localCount)) // count
+			funcBody.WriteByte(0x7F)                  // type i32
 		} else {
-			return errors.New("unsupported statement")
+			funcBody.Write(encodeULEB128(0)) // 0 groups of locals
 		}
+
+		// --- Instructions ---
+		for _, stmt := range function.Body.Statements {
+			if err := m.generateStatement(stmt, &funcBody); err != nil {
+				return err
+			}
+		}
+
+		funcBody.WriteByte(OpCodeEnd)
+
+		// Write size of this function body + content to payload
+		codePayload.Write(encodeULEB128(uint32(funcBody.Len())))
+		codePayload.Write(funcBody.Bytes())
 	}
 
-	codePayload.Write(encodeULEB128(uint32(body.Len())))
-	codePayload.Write(body.Bytes())
 	m.writeSection(SecCode, codePayload.Bytes())
-
 	return nil
+}
 
+func (m *WASMModule) generateStatement(stmt parser.Node, body *bytes.Buffer) error {
+	switch s := stmt.(type) {
+	case parser.ReturnStmt:
+		m.generateExpressionCode(s.Value, body)
+		body.WriteByte(OpCodeReturn)
+		return nil
+
+	case parser.VariableDefineStmt:
+		m.generateExpressionCode(s.Value, body)
+		body.WriteByte(OpCodeLocalSet)
+		body.Write(encodeULEB128(uint32(s.Symbol.Index)))
+		return nil
+
+	default:
+		return errors.New("unsupported statement type")
+	}
+}
+
+// Recursively generates code for expressions (Post-Order Traversal)
+func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffer) {
+	switch t := value.(type) {
+
+	case parser.Constant:
+		body.WriteByte(OpCodeI32Const)
+		intValue, _ := strconv.Atoi(t.Value)
+		body.Write(encodeSLEB128(int32(intValue)))
+
+	case parser.VariableAccess:
+		body.WriteByte(OpCodeLocalGet)
+		body.Write(encodeULEB128(uint32(t.Index)))
+
+	case parser.UnaryExpression:
+		// WASM doesn't have a "negate" opcode for i32, so we do (0 - value)
+		body.WriteByte(OpCodeI32Const)
+		body.Write(encodeSLEB128(0))
+		m.generateExpressionCode(t.Value, body)
+		body.WriteByte(OpCodeI32Sub)
+
+	case parser.BinaryExpression:
+		m.generateExpressionCode(t.A, body)
+		m.generateExpressionCode(t.B, body)
+
+		switch t.Operation {
+		case "+":
+			body.WriteByte(OpCodeI32Add)
+		case "-":
+			body.WriteByte(OpCodeI32Sub)
+		case "*":
+			body.WriteByte(OpCodeI32Mul)
+		case "/":
+			body.WriteByte(OpCodeI32SignedDivision)
+		}
+	}
 }
 
 func (m *WASMModule) Generate() error {

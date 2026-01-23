@@ -11,6 +11,18 @@ func isBinaryOperator(token lexer.Token) bool {
 	return token.Type == lexer.TK_DASH || token.Type == lexer.TK_PLUS || token.Type == lexer.TK_SLASH || token.Type == lexer.TK_STAR
 }
 
+// Higher number = higher precedence (multiplication before addition)
+func getPrecedence(token lexer.Token) int {
+	switch token.Type {
+	case lexer.TK_STAR, lexer.TK_SLASH:
+		return 2
+	case lexer.TK_PLUS, lexer.TK_DASH:
+		return 1
+	default:
+		return 0
+	}
+}
+
 type Symbol struct {
 	Index int
 	Type  string
@@ -89,13 +101,6 @@ func New(tokens []lexer.Token) *Parser {
 	}
 }
 
-func (p *Parser) peekToken() lexer.Token {
-	if p.head+1 == len(p.tokens) {
-		return lexer.Token{}
-	}
-	return p.tokens[p.head+1]
-}
-
 func (p *Parser) getCurrentToken() lexer.Token {
 	return p.tokens[p.head]
 }
@@ -138,8 +143,13 @@ func (p *Parser) parseBlock(f *FunctionDecl) Block {
 			continue
 		}
 		stmt := p.parseStatement(f)
-		block.Statements = append(block.Statements, stmt)
-		p.head++
+
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		} else {
+			fmt.Printf("Unexpected token: %s\n", p.getCurrentToken().Literal)
+			p.head++
+		}
 	}
 
 	return block
@@ -159,8 +169,7 @@ func (p *Parser) parseStatement(f *FunctionDecl) Node {
 func (p *Parser) parseReturn(f *FunctionDecl) Node {
 	p.head++ // consume 'return'
 
-	stmt := ReturnStmt{Value: p.parseExpression(f)}
-	p.head++ // consume return value
+	stmt := ReturnStmt{Value: p.parseExpression(f, 0)}
 
 	if p.getCurrentToken().Type == lexer.TK_SEMICOLON {
 		p.head++
@@ -180,7 +189,7 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) Node {
 		p.head++ // consume '='
 	}
 
-	stmt := VariableDefineStmt{Value: p.parseExpression(f), Symbol: sym}
+	stmt := VariableDefineStmt{Value: p.parseExpression(f, 0), Symbol: sym}
 
 	if p.getCurrentToken().Type == lexer.TK_SEMICOLON {
 		p.head++
@@ -188,60 +197,87 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) Node {
 	return stmt
 }
 
-func (p *Parser) parseBinaryExpression(f *FunctionDecl, a Node) Node {
-	p.head++
+func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) Node {
+	lhs := p.parsePrimary(f)
 
-	operation := p.getCurrentToken().Literal
-	if p.peekToken().Type != lexer.TK_IDENT && p.peekToken().Type != lexer.TK_NUMBER {
-		fmt.Printf("error parsing expression, expected number or identifier\n")
-		return nil
-	}
-	p.head++
+	for {
+		opToken := p.getCurrentToken()
 
-	b := p.parseExpression(f)
-	return BinaryExpression{
-		a,
-		operation,
-		b,
+		if opToken.Type == lexer.TK_SEMICOLON || opToken.Type == lexer.TK_EOF || opToken.Type == lexer.TK_RPAREN {
+			break
+		}
+
+		if !isBinaryOperator(opToken) {
+			break
+		}
+
+		precedence := getPrecedence(opToken)
+
+		// If the next operator has lower precedence than what we are currently
+		// working on, return what we have so far.
+		if precedence < minPrecedence {
+			break
+		}
+
+		op := opToken.Literal
+		p.head++
+
+		// We pass precedence + 1 to ensure left-associativity
+		// (so 1-2-3 parses as (1-2)-3, not 1-(2-3))
+		rhs := p.parseExpression(f, precedence+1)
+
+		lhs = BinaryExpression{
+			A:         lhs,
+			Operation: op,
+			B:         rhs,
+		}
 	}
+
+	return lhs
 }
 
-func (p *Parser) parseExpression(f *FunctionDecl) Node {
-	currentToken := p.getCurrentToken()
+func (p *Parser) parsePrimary(f *FunctionDecl) Node {
+	token := p.getCurrentToken()
 
-	switch currentToken.Type {
+	switch token.Type {
 	case lexer.TK_NUMBER:
-		if p.peekToken().Type == lexer.TK_SEMICOLON {
-			return Constant{Value: currentToken.Literal}
-		} else if isBinaryOperator(p.peekToken()) {
-			a := Constant{Value: currentToken.Literal}
-			return p.parseBinaryExpression(f, a)
-		}
-	case lexer.TK_IDENT:
-		if p.peekToken().Type == lexer.TK_SEMICOLON {
-			sym, exists := f.GetSymbol(currentToken.Literal)
-			if !exists {
-				fmt.Printf("error: variable '%s' is not defined", currentToken.Literal)
-				return nil
-			}
-			return VariableAccess{Index: sym.Index}
-		} else if isBinaryOperator(p.peekToken()) {
-			sym, exists := f.GetSymbol(currentToken.Literal)
-			if !exists {
-				fmt.Printf("error: variable '%s' is not defined", currentToken.Literal)
-				return nil
-			}
-			a := VariableAccess{Index: sym.Index}
-			return p.parseBinaryExpression(f, a)
-		}
-	case lexer.TK_DASH:
-		expr := UnaryExpression{Operation: "-"}
-		p.head++
-		expr.Value = p.parseExpression(f)
-		return expr
-	}
+		p.head++ // Consume the number
+		return Constant{Value: token.Literal}
 
-	return nil
+	case lexer.TK_IDENT:
+		p.head++ // Consume the identifier
+		sym, exists := f.GetSymbol(token.Literal)
+		if !exists {
+			fmt.Printf("error: variable '%s' is not defined\n", token.Literal)
+			return nil
+		}
+		return VariableAccess{Index: sym.Index}
+
+	case lexer.TK_DASH:
+		// Handle Unary Minus (e.g. -5)
+		p.head++ // Consume '-'
+		expr := UnaryExpression{Operation: "-"}
+
+		// Parse the value being negated with high precedence
+		// to ensure -5+2 parses as (-5)+2
+		expr.Value = p.parseExpression(f, getPrecedence(token))
+		return expr
+
+	case lexer.TK_LPAREN:
+		// Handle (expression)
+		p.head++                        // consume '('
+		expr := p.parseExpression(f, 0) // reset precedence inside parens
+		if p.getCurrentToken().Type != lexer.TK_RPAREN {
+			fmt.Printf("expected ')'\n")
+			return nil
+		}
+		p.head++ // consume ')'
+		return expr
+
+	default:
+		fmt.Printf("Unexpected token in expression: %s\n", token.Literal)
+		return nil
+	}
 }
 
 func (p *Parser) Parse() (Program, error) {
