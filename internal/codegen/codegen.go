@@ -118,6 +118,14 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 		body.Write(encodeSLEB128(0))
 		m.generateExpressionCode(unary.Value, body)
 		body.WriteByte(OpCodeI32Sub)
+	} else if binaryExpr, ok := value.(parser.BinaryExpression); ok {
+		m.generateExpressionCode(binaryExpr.A, body)
+		m.generateExpressionCode(binaryExpr.B, body)
+		switch binaryExpr.Operation {
+		case "-":
+			body.WriteByte(OpCodeI32Sub)
+
+		}
 	}
 
 }

@@ -66,6 +66,12 @@ type UnaryExpression struct {
 	Operation string
 }
 
+type BinaryExpression struct {
+	A         Node
+	Operation string
+	B         Node
+}
+
 type Parser struct {
 	tokens []lexer.Token
 	head   int
@@ -76,6 +82,13 @@ func New(tokens []lexer.Token) *Parser {
 		tokens: tokens,
 		head:   0,
 	}
+}
+
+func (p *Parser) peekToken() lexer.Token {
+	if p.head+1 == len(p.tokens) {
+		return lexer.Token{}
+	}
+	return p.tokens[p.head+1]
 }
 
 func (p *Parser) getCurrentToken() lexer.Token {
@@ -175,9 +188,47 @@ func (p *Parser) parseExpression(f *FunctionDecl) Node {
 
 	switch currentToken.Type {
 	case lexer.TK_NUMBER:
-		return Constant{Value: currentToken.Literal}
+		if p.peekToken().Type == lexer.TK_SEMICOLON {
+			return Constant{Value: currentToken.Literal}
+		} else if p.peekToken().Type == lexer.TK_DASH {
+			a := Constant{Value: currentToken.Literal}
+			p.head++
+
+			operation := p.getCurrentToken().Literal
+			if p.peekToken().Type != lexer.TK_IDENT && p.peekToken().Type != lexer.TK_NUMBER {
+				fmt.Printf("error parsing expression, expected number or identifier\n")
+				return nil
+			}
+			p.head++
+
+			b := p.parseExpression(f)
+			return BinaryExpression{
+				a,
+				operation,
+				b,
+			}
+		}
 	case lexer.TK_IDENT:
-		return VariableAccess{Index: f.GetSymbol(currentToken.Literal).Index}
+		if p.peekToken().Type == lexer.TK_SEMICOLON {
+			return VariableAccess{Index: f.GetSymbol(currentToken.Literal).Index}
+		} else if p.peekToken().Type == lexer.TK_DASH {
+			a := VariableAccess{Index: f.GetSymbol(currentToken.Literal).Index}
+			p.head++
+
+			operation := p.getCurrentToken().Literal
+			if p.peekToken().Type != lexer.TK_IDENT && p.peekToken().Type != lexer.TK_NUMBER {
+				fmt.Printf("error parsing expression, expected number or identifier\n")
+				return nil
+			}
+			p.head++
+
+			b := p.parseExpression(f)
+			return BinaryExpression{
+				a,
+				operation,
+				b,
+			}
+		}
 	case lexer.TK_DASH:
 		expr := UnaryExpression{Operation: "-"}
 		p.head++
