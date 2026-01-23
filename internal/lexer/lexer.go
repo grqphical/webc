@@ -38,6 +38,9 @@ const (
 
 	TK_EQUAL TokenType = "="
 	TK_DASH  TokenType = "-"
+	TK_PLUS  TokenType = "+"
+	TK_STAR  TokenType = "*"
+	TK_SLASH TokenType = "/"
 
 	TK_EOF TokenType = "EOF"
 )
@@ -108,6 +111,10 @@ func (l *Lexer) makeNumber() {
 	})
 }
 
+func (l *Lexer) peek() byte {
+	return l.source[l.head+1]
+}
+
 func (l *Lexer) ParseSource() ([]Token, error) {
 	for l.head < len(l.source) {
 		tok := l.getCurrentChar()
@@ -161,6 +168,18 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 				Literal: "-",
 			})
 			l.head++
+		case '/':
+			if l.peek() == '/' {
+				// skip lines with comments
+				for l.getCurrentChar() != '\n' {
+					l.head++
+				}
+			} else {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_SLASH,
+					Literal: "/",
+				})
+			}
 
 		default:
 			if isLetter(tok) {
