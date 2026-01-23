@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/grqphical/webc/internal/codegen"
 	"github.com/grqphical/webc/internal/lexer"
 	"github.com/grqphical/webc/internal/parser"
 )
@@ -27,8 +28,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("tokens: %+v\n", tokens)
-
 	parser := parser.New(tokens)
 	program, err := parser.Parse()
 	if err != nil {
@@ -36,5 +35,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("program: %+v\n", program)
+	module := codegen.NewModule(program)
+	err = module.Generate()
+	if err != nil {
+
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	module.Save("output.wasm")
+
 }
