@@ -162,10 +162,22 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 				Literal: "=",
 			})
 			l.head++
+		case '+':
+			l.tokens = append(l.tokens, Token{
+				Type:    TK_PLUS,
+				Literal: "+",
+			})
+			l.head++
 		case '-':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_DASH,
 				Literal: "-",
+			})
+			l.head++
+		case '*':
+			l.tokens = append(l.tokens, Token{
+				Type:    TK_STAR,
+				Literal: "*",
 			})
 			l.head++
 		case '/':
@@ -179,6 +191,7 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 					Type:    TK_SLASH,
 					Literal: "/",
 				})
+				l.head++
 			}
 
 		default:

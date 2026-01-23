@@ -7,6 +7,10 @@ import (
 	"github.com/grqphical/webc/internal/lexer"
 )
 
+func isBinaryOperator(token lexer.Token) bool {
+	return token.Type == lexer.TK_DASH || token.Type == lexer.TK_PLUS || token.Type == lexer.TK_SLASH || token.Type == lexer.TK_STAR
+}
+
 type Symbol struct {
 	Index int
 	Type  string
@@ -209,7 +213,7 @@ func (p *Parser) parseExpression(f *FunctionDecl) Node {
 	case lexer.TK_NUMBER:
 		if p.peekToken().Type == lexer.TK_SEMICOLON {
 			return Constant{Value: currentToken.Literal}
-		} else if p.peekToken().Type == lexer.TK_DASH {
+		} else if isBinaryOperator(p.peekToken()) {
 			a := Constant{Value: currentToken.Literal}
 			return p.parseBinaryExpression(f, a)
 		}
@@ -221,7 +225,7 @@ func (p *Parser) parseExpression(f *FunctionDecl) Node {
 				return nil
 			}
 			return VariableAccess{Index: sym.Index}
-		} else if p.peekToken().Type == lexer.TK_DASH {
+		} else if isBinaryOperator(p.peekToken()) {
 			sym, exists := f.GetSymbol(currentToken.Literal)
 			if !exists {
 				fmt.Printf("error: variable '%s' is not defined", currentToken.Literal)

@@ -19,11 +19,14 @@ const (
 )
 
 const (
-	OpCodeReturn   byte = 0x0B
-	OpCodeI32Const byte = 0x41
-	OpCodeLocalGet byte = 0x20
-	OpCodeLocalSet byte = 0x21
-	OpCodeI32Sub   byte = 0x6B
+	OpCodeReturn            byte = 0x0B
+	OpCodeI32Const          byte = 0x41
+	OpCodeLocalGet          byte = 0x20
+	OpCodeLocalSet          byte = 0x21
+	OpCodeI32Add            byte = 0x6A
+	OpCodeI32Sub            byte = 0x6B
+	OpCodeI32Mul            byte = 0x6C
+	OpCodeI32SignedDivision byte = 0x6D
 )
 
 func encodeULEB128(n uint32) []byte {
@@ -124,7 +127,12 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 		switch binaryExpr.Operation {
 		case "-":
 			body.WriteByte(OpCodeI32Sub)
-
+		case "+":
+			body.WriteByte(OpCodeI32Add)
+		case "/":
+			body.WriteByte(OpCodeI32SignedDivision)
+		case "*":
+			body.WriteByte(OpCodeI32Mul)
 		}
 	}
 
