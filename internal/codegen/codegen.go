@@ -94,6 +94,24 @@ func (m *WASMModule) generateExportSection() {
 	m.writeSection(SecExport, exportPayload.Bytes())
 }
 
+func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffer) {
+	if constant, ok := value.(parser.Constant); ok {
+		body.WriteByte(0x41) // Opcode: i32.const
+		intValue, _ := strconv.Atoi(constant.Value)
+		body.Write(encodeSLEB128(int32(intValue)))
+	} else if varAccess, ok := value.(parser.VariableAccess); ok {
+		body.WriteByte(0x20) // Opcode: local.get
+		body.Write(encodeULEB128(uint32(varAccess.Index)))
+
+	} else if unary, ok := value.(parser.UnaryExpression); ok {
+		body.WriteByte(0x41)         // Opcode: i32.const
+		body.Write(encodeSLEB128(0)) // to negate value
+		m.generateExpressionCode(unary.Value, body)
+		body.WriteByte(0x6B)
+	}
+
+}
+
 func (m *WASMModule) generateCodeSection() error {
 	codePayload := bytes.Buffer{}
 	codePayload.Write(encodeULEB128(1)) // number of function bodies
@@ -106,20 +124,10 @@ func (m *WASMModule) generateCodeSection() error {
 	mainFunc := m.program.Functions[0]
 	for _, stmt := range mainFunc.Body.Statements {
 		if retStmt, ok := stmt.(parser.ReturnStmt); ok {
-			if _, ok := retStmt.Value.(parser.Constant); ok {
-				body.WriteByte(0x41) // Opcode: i32.const
-				returnValue, _ := strconv.Atoi(retStmt.Value.(parser.Constant).Value)
-				body.Write(encodeSLEB128(int32(returnValue))) // value to return
-			} else if varAccess, ok := retStmt.Value.(parser.VariableAccess); ok {
-				body.WriteByte(0x20) // Opcode: local.get
-				body.Write(encodeULEB128(uint32(varAccess.Index)))
-			}
-			body.WriteByte(0x0B)
+			m.generateExpressionCode(retStmt.Value, &body)
+			body.WriteByte(0x0B) // return
 		} else if varDefineStmt, ok := stmt.(parser.VariableDefineStmt); ok {
-			variableValue, _ := strconv.Atoi(varDefineStmt.Value.(parser.Constant).Value)
-			body.WriteByte(0x41) // Opcode: i32.const
-			body.Write(encodeSLEB128(int32(variableValue)))
-
+			m.generateExpressionCode(varDefineStmt.Value, &body)
 			variableIndex := varDefineStmt.Symbol.Index
 
 			body.WriteByte(0x21) // local.set

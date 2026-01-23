@@ -36,7 +36,7 @@ func (f *FunctionDecl) DefineSymbol(name string, typeName string) Symbol {
 	return sym
 }
 
-func (f *FunctionDecl) GetSymbolIndex(name string) Symbol {
+func (f *FunctionDecl) GetSymbol(name string) Symbol {
 	return f.SymbolTable[name]
 }
 
@@ -59,6 +59,11 @@ type Constant struct {
 
 type VariableAccess struct {
 	Index int
+}
+
+type UnaryExpression struct {
+	Value     Node
+	Operation string
 }
 
 type Parser struct {
@@ -136,12 +141,7 @@ func (p *Parser) parseStatement(f *FunctionDecl) Node {
 func (p *Parser) parseReturn(f *FunctionDecl) Node {
 	p.head++ // consume 'return'
 
-	var stmt ReturnStmt
-	if p.getCurrentToken().Type == lexer.TK_NUMBER {
-		stmt = ReturnStmt{Value: Constant{Value: p.getCurrentToken().Literal}}
-	} else if p.getCurrentToken().Type == lexer.TK_IDENT {
-		stmt = ReturnStmt{Value: VariableAccess{Index: f.GetSymbolIndex(p.getCurrentToken().Literal).Index}}
-	}
+	stmt := ReturnStmt{Value: p.parseExpression(f)}
 	p.head++ // consume return value
 
 	if p.getCurrentToken().Type == lexer.TK_SEMICOLON {
@@ -162,12 +162,30 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) Node {
 		p.head++ // consume '='
 	}
 
-	stmt := VariableDefineStmt{Value: Constant{Value: p.getCurrentToken().Literal}, Symbol: sym}
+	stmt := VariableDefineStmt{Value: p.parseExpression(f), Symbol: sym}
 
 	if p.getCurrentToken().Type == lexer.TK_SEMICOLON {
 		p.head++
 	}
 	return stmt
+}
+
+func (p *Parser) parseExpression(f *FunctionDecl) Node {
+	currentToken := p.getCurrentToken()
+
+	switch currentToken.Type {
+	case lexer.TK_NUMBER:
+		return Constant{Value: currentToken.Literal}
+	case lexer.TK_IDENT:
+		return VariableAccess{Index: f.GetSymbol(currentToken.Literal).Index}
+	case lexer.TK_DASH:
+		expr := UnaryExpression{Operation: "-"}
+		p.head++
+		expr.Value = p.parseExpression(f)
+		return expr
+	}
+
+	return nil
 }
 
 func (p *Parser) Parse() (Program, error) {

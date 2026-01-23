@@ -34,6 +34,7 @@ const (
 	TK_RBRACE    TokenType = "}"
 	TK_SEMICOLON TokenType = ";"
 	TK_EQUAL     TokenType = "="
+	TK_DASH      TokenType = "-"
 	TK_EOF       TokenType = "EOF"
 )
 
@@ -148,6 +149,12 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_EQUAL,
 				Literal: "=",
+			})
+			l.head++
+		case '-':
+			l.tokens = append(l.tokens, Token{
+				Type:    TK_DASH,
+				Literal: "-",
 			})
 			l.head++
 
