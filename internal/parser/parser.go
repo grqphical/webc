@@ -36,8 +36,9 @@ func (f *FunctionDecl) DefineSymbol(name string, typeName string) Symbol {
 	return sym
 }
 
-func (f *FunctionDecl) GetSymbol(name string) Symbol {
-	return f.SymbolTable[name]
+func (f *FunctionDecl) GetSymbol(name string) (Symbol, bool) {
+	sym, exists := f.SymbolTable[name]
+	return sym, exists
 }
 
 type Block struct {
@@ -210,9 +211,19 @@ func (p *Parser) parseExpression(f *FunctionDecl) Node {
 		}
 	case lexer.TK_IDENT:
 		if p.peekToken().Type == lexer.TK_SEMICOLON {
-			return VariableAccess{Index: f.GetSymbol(currentToken.Literal).Index}
+			sym, exists := f.GetSymbol(currentToken.Literal)
+			if !exists {
+				fmt.Printf("error: variable '%s' is not defined", currentToken.Literal)
+				return nil
+			}
+			return VariableAccess{Index: sym.Index}
 		} else if p.peekToken().Type == lexer.TK_DASH {
-			a := VariableAccess{Index: f.GetSymbol(currentToken.Literal).Index}
+			sym, exists := f.GetSymbol(currentToken.Literal)
+			if !exists {
+				fmt.Printf("error: variable '%s' is not defined", currentToken.Literal)
+				return nil
+			}
+			a := VariableAccess{Index: sym.Index}
 			p.head++
 
 			operation := p.getCurrentToken().Literal
