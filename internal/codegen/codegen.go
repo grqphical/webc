@@ -18,6 +18,14 @@ const (
 	SecCode     byte = 10
 )
 
+const (
+	OpCodeReturn   byte = 0x0B
+	OpCodeI32Const byte = 0x41
+	OpCodeLocalGet byte = 0x20
+	OpCodeLocalSet byte = 0x21
+	OpCodeI32Sub   byte = 0x6B
+)
+
 func encodeULEB128(n uint32) []byte {
 	var res []byte
 	for {
@@ -96,18 +104,20 @@ func (m *WASMModule) generateExportSection() {
 
 func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffer) {
 	if constant, ok := value.(parser.Constant); ok {
-		body.WriteByte(0x41) // Opcode: i32.const
+		body.WriteByte(OpCodeI32Const)
 		intValue, _ := strconv.Atoi(constant.Value)
+
 		body.Write(encodeSLEB128(int32(intValue)))
 	} else if varAccess, ok := value.(parser.VariableAccess); ok {
-		body.WriteByte(0x20) // Opcode: local.get
+		body.WriteByte(OpCodeLocalGet)
 		body.Write(encodeULEB128(uint32(varAccess.Index)))
 
 	} else if unary, ok := value.(parser.UnaryExpression); ok {
-		body.WriteByte(0x41)         // Opcode: i32.const
-		body.Write(encodeSLEB128(0)) // to negate value
+		// negate valuing by generating code for 0 - value
+		body.WriteByte(OpCodeI32Const)
+		body.Write(encodeSLEB128(0))
 		m.generateExpressionCode(unary.Value, body)
-		body.WriteByte(0x6B)
+		body.WriteByte(OpCodeI32Sub)
 	}
 
 }
@@ -125,12 +135,13 @@ func (m *WASMModule) generateCodeSection() error {
 	for _, stmt := range mainFunc.Body.Statements {
 		if retStmt, ok := stmt.(parser.ReturnStmt); ok {
 			m.generateExpressionCode(retStmt.Value, &body)
-			body.WriteByte(0x0B) // return
+			body.WriteByte(OpCodeReturn)
+
 		} else if varDefineStmt, ok := stmt.(parser.VariableDefineStmt); ok {
 			m.generateExpressionCode(varDefineStmt.Value, &body)
 			variableIndex := varDefineStmt.Symbol.Index
 
-			body.WriteByte(0x21) // local.set
+			body.WriteByte(OpCodeLocalSet)
 			body.Write(encodeULEB128(uint32(variableIndex)))
 
 		} else {

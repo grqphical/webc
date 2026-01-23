@@ -25,17 +25,21 @@ func (l LexerError) Error() string {
 type TokenType string
 
 const (
-	TK_KEYWORD   TokenType = "KEYWORD"
-	TK_IDENT     TokenType = "IDENTIFIER"
-	TK_NUMBER    TokenType = "NUMBER"
-	TK_LPAREN    TokenType = "("
-	TK_RPAREN    TokenType = ")"
-	TK_LBRACE    TokenType = "{"
-	TK_RBRACE    TokenType = "}"
+	TK_KEYWORD TokenType = "KEYWORD"
+	TK_IDENT   TokenType = "IDENTIFIER"
+	TK_NUMBER  TokenType = "NUMBER"
+
+	TK_LPAREN TokenType = "("
+	TK_RPAREN TokenType = ")"
+	TK_LBRACE TokenType = "{"
+	TK_RBRACE TokenType = "}"
+
 	TK_SEMICOLON TokenType = ";"
-	TK_EQUAL     TokenType = "="
-	TK_DASH      TokenType = "-"
-	TK_EOF       TokenType = "EOF"
+
+	TK_EQUAL TokenType = "="
+	TK_DASH  TokenType = "-"
+
+	TK_EOF TokenType = "EOF"
 )
 
 var keywords map[string]any = map[string]any{
