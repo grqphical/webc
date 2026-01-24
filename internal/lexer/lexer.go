@@ -53,6 +53,7 @@ var keywords map[string]any = map[string]any{
 type Token struct {
 	Type    TokenType
 	Literal string
+	Line    int
 }
 
 type Lexer struct {
@@ -93,6 +94,7 @@ func (l *Lexer) makeLiteral() {
 	l.tokens = append(l.tokens, Token{
 		Type:    tokenType,
 		Literal: literal,
+		Line:    l.lineCount,
 	})
 
 }
@@ -108,6 +110,7 @@ func (l *Lexer) makeNumber() {
 	l.tokens = append(l.tokens, Token{
 		Type:    TK_NUMBER,
 		Literal: literal.String(),
+		Line:    l.lineCount,
 	})
 }
 
@@ -130,54 +133,63 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_LBRACE,
 				Literal: "{",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '}':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_RBRACE,
 				Literal: "}",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '(':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_LPAREN,
 				Literal: "(",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case ')':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_RPAREN,
 				Literal: ")",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case ';':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_SEMICOLON,
 				Literal: ";",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '=':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_EQUAL,
 				Literal: "=",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '+':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_PLUS,
 				Literal: "+",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '-':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_DASH,
 				Literal: "-",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '*':
 			l.tokens = append(l.tokens, Token{
 				Type:    TK_STAR,
 				Literal: "*",
+				Line:    l.lineCount,
 			})
 			l.head++
 		case '/':
@@ -190,6 +202,7 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 				l.tokens = append(l.tokens, Token{
 					Type:    TK_SLASH,
 					Literal: "/",
+					Line:    l.lineCount,
 				})
 				l.head++
 			}
@@ -212,6 +225,7 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 	l.tokens = append(l.tokens, Token{
 		Type:    TK_EOF,
 		Literal: "EOF",
+		Line:    l.lineCount,
 	})
 
 	return l.tokens, nil

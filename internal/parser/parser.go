@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/grqphical/webc/internal/lexer"
@@ -117,21 +116,25 @@ func (p *Parser) parseFunction() (FunctionDecl, error) {
 	p.head++
 
 	if p.getCurrentToken().Type != lexer.TK_LPAREN {
-		return FunctionDecl{}, fmt.Errorf("invalid token after function declaration, expected '(' got '%s'", p.getCurrentToken().Literal)
+		return FunctionDecl{}, fmt.Errorf("invalid token after function declaration, expected '(' got '%s' on line %d", p.getCurrentToken().Literal, p.getCurrentToken().Line)
 	}
 	p.head++
 	if p.getCurrentToken().Type != lexer.TK_RPAREN {
-		return FunctionDecl{}, errors.New("invalid token after '(' declaration, expected ')'")
+		return FunctionDecl{}, fmt.Errorf("invalid token after '(' declaration, expected ')' on line %d", p.getCurrentToken().Line)
 	}
 	p.head++
 
-	funcDecl.Body = p.parseBlock(&funcDecl)
+	body, err := p.parseBlock(&funcDecl)
+	if err != nil {
+		return FunctionDecl{}, err
+	}
+	funcDecl.Body = body
 
 	return funcDecl, nil
 
 }
 
-func (p *Parser) parseBlock(f *FunctionDecl) Block {
+func (p *Parser) parseBlock(f *FunctionDecl) (Block, error) {
 	block := Block{}
 
 	// consume {
@@ -142,43 +145,50 @@ func (p *Parser) parseBlock(f *FunctionDecl) Block {
 			p.head++
 			continue
 		}
-		stmt := p.parseStatement(f)
+		stmt, err := p.parseStatement(f)
+		if err != nil {
+			return Block{}, err
+		}
 
 		if stmt != nil {
 			block.Statements = append(block.Statements, stmt)
 		} else {
-			fmt.Printf("Unexpected token: %s\n", p.getCurrentToken().Literal)
-			p.head++
+			return Block{}, fmt.Errorf("Unexpected token: %s on line %d\n", p.getCurrentToken().Literal, p.getCurrentToken().Line)
 		}
 	}
 
-	return block
+	return block, nil
 }
 
-func (p *Parser) parseStatement(f *FunctionDecl) Node {
+func (p *Parser) parseStatement(f *FunctionDecl) (Node, error) {
 	switch p.getCurrentToken().Literal {
 	case "return":
 		return p.parseReturn(f)
 	case "int":
 		return p.parseVarAssign(f)
 	default:
-		return nil
+		return nil, fmt.Errorf("invalid statement on line %d")
 	}
 }
 
-func (p *Parser) parseReturn(f *FunctionDecl) Node {
+func (p *Parser) parseReturn(f *FunctionDecl) (Node, error) {
 	p.head++ // consume 'return'
 
-	stmt := ReturnStmt{Value: p.parseExpression(f, 0)}
-
-	if p.getCurrentToken().Type == lexer.TK_SEMICOLON {
-		p.head++
+	parsedExpr, err := p.parseExpression(f, 0)
+	if err != nil {
+		return nil, err
 	}
+	stmt := ReturnStmt{Value: parsedExpr}
 
-	return stmt
+	if p.getCurrentToken().Type != lexer.TK_SEMICOLON {
+		return nil, fmt.Errorf("missing semicolon on line %d", p.getCurrentToken().Line)
+	}
+	p.head++
+
+	return stmt, nil
 }
 
-func (p *Parser) parseVarAssign(f *FunctionDecl) Node {
+func (p *Parser) parseVarAssign(f *FunctionDecl) (Node, error) {
 	p.head++ // consume int (for now)
 
 	name := p.getCurrentToken().Literal
@@ -189,16 +199,24 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) Node {
 		p.head++ // consume '='
 	}
 
-	stmt := VariableDefineStmt{Value: p.parseExpression(f, 0), Symbol: sym}
-
-	if p.getCurrentToken().Type == lexer.TK_SEMICOLON {
-		p.head++
+	parsedExpr, err := p.parseExpression(f, 0)
+	if err != nil {
+		return nil, err
 	}
-	return stmt
+	stmt := VariableDefineStmt{Value: parsedExpr, Symbol: sym}
+
+	if p.getCurrentToken().Type != lexer.TK_SEMICOLON {
+		return nil, fmt.Errorf("missing semicolon on line %d", p.getCurrentToken().Line)
+	}
+	p.head++
+	return stmt, nil
 }
 
-func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) Node {
-	lhs := p.parsePrimary(f)
+func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) (Node, error) {
+	lhs, err := p.parsePrimary(f)
+	if err != nil {
+		return nil, err
+	}
 
 	for {
 		opToken := p.getCurrentToken()
@@ -224,7 +242,10 @@ func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) Node {
 
 		// We pass precedence + 1 to ensure left-associativity
 		// (so 1-2-3 parses as (1-2)-3, not 1-(2-3))
-		rhs := p.parseExpression(f, precedence+1)
+		rhs, err := p.parseExpression(f, precedence+1)
+		if err != nil {
+			return nil, err
+		}
 
 		lhs = BinaryExpression{
 			A:         lhs,
@@ -233,25 +254,24 @@ func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) Node {
 		}
 	}
 
-	return lhs
+	return lhs, nil
 }
 
-func (p *Parser) parsePrimary(f *FunctionDecl) Node {
+func (p *Parser) parsePrimary(f *FunctionDecl) (Node, error) {
 	token := p.getCurrentToken()
 
 	switch token.Type {
 	case lexer.TK_NUMBER:
 		p.head++ // Consume the number
-		return Constant{Value: token.Literal}
+		return Constant{Value: token.Literal}, nil
 
 	case lexer.TK_IDENT:
 		p.head++ // Consume the identifier
 		sym, exists := f.GetSymbol(token.Literal)
 		if !exists {
-			fmt.Printf("error: variable '%s' is not defined\n", token.Literal)
-			return nil
+			return nil, fmt.Errorf("undeclared variable '%s' on line %d", token.Literal, token.Line)
 		}
-		return VariableAccess{Index: sym.Index}
+		return VariableAccess{Index: sym.Index}, nil
 
 	case lexer.TK_DASH:
 		// Handle Unary Minus (e.g. -5)
@@ -260,23 +280,28 @@ func (p *Parser) parsePrimary(f *FunctionDecl) Node {
 
 		// Parse the value being negated with high precedence
 		// to ensure -5+2 parses as (-5)+2
-		expr.Value = p.parseExpression(f, getPrecedence(token))
-		return expr
+		value, err := p.parseExpression(f, getPrecedence(token))
+		if err != nil {
+			return nil, err
+		}
+		expr.Value = value
+		return expr, nil
 
 	case lexer.TK_LPAREN:
 		// Handle (expression)
-		p.head++                        // consume '('
-		expr := p.parseExpression(f, 0) // reset precedence inside parens
+		p.head++                             // consume '('
+		expr, err := p.parseExpression(f, 0) // reset precedence inside parens
+		if err != nil {
+			return nil, err
+		}
 		if p.getCurrentToken().Type != lexer.TK_RPAREN {
-			fmt.Printf("expected ')'\n")
-			return nil
+			return nil, fmt.Errorf("expected ')', got '%s' on line %d", p.getCurrentToken().Literal, p.getCurrentToken().Line)
 		}
 		p.head++ // consume ')'
-		return expr
+		return expr, nil
 
 	default:
-		fmt.Printf("Unexpected token in expression: %s\n", token.Literal)
-		return nil
+		return nil, fmt.Errorf("Unexpected token in expression: '%s' on line %d\n", token.Literal, token.Line)
 	}
 }
 
