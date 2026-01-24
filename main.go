@@ -22,6 +22,7 @@ func main() {
 	flag.Parse()
 
 	if len(flag.Args()) != 1 {
+		fmt.Fprintf(os.Stderr, "missing input file\n")
 		flag.Usage()
 		os.Exit(1)
 	}
