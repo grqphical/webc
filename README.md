@@ -3,6 +3,9 @@ webc is a compiler for C99 that outputs WASM and a JS runtime for both servers a
 
 Currently in development
 
+## Features
+Currently it only supports creating a `main()` function that returns an integer, variable declarations, and arithmetic
+
 ## Usage
 Simply run the compiler with a C file and it will output a WASM binary as well as an HTML/JS file to run the program
 
