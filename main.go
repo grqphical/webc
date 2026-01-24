@@ -1,21 +1,32 @@
 package main
 
 import (
+	"embed"
+	"flag"
 	"fmt"
+	"html/template"
 	"os"
+	"path/filepath"
 
 	"github.com/grqphical/webc/internal/codegen"
 	"github.com/grqphical/webc/internal/lexer"
 	"github.com/grqphical/webc/internal/parser"
 )
 
+//go:embed templates/*
+var templateFS embed.FS
+
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: webc [source_file]\n")
+	compileForServer := flag.Bool("s", false, "Whether or not the runtime should be for the server instead of the browser")
+	outputName := flag.String("o", "output.wasm", "Name/path of output binary")
+	flag.Parse()
+
+	if len(flag.Args()) != 1 {
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	sourceCode, err := os.ReadFile(os.Args[1])
+	sourceCode, err := os.ReadFile(flag.Args()[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not read source file: %v\n", err)
 		os.Exit(1)
@@ -44,6 +55,55 @@ func main() {
 		os.Exit(1)
 	}
 
-	module.Save("output.wasm")
+	outputDir := filepath.Dir(*outputName)
+	module.Save(*outputName)
+
+	if !*compileForServer {
+		htmlTemplate, err := templateFS.ReadFile("templates/index.html")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		err = os.WriteFile(filepath.Join(outputDir, "index.html"), htmlTemplate, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+
+		jsTemplate, err := templateFS.ReadFile("templates/browser.js")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		tmpl := template.Must(template.New("browser.js").Parse(string(jsTemplate)))
+
+		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0644)
+		defer jsFile.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		tmpl.Execute(jsFile, map[string]any{
+			"BinaryName": filepath.Base(*outputName),
+		})
+	} else {
+		jsTemplate, err := templateFS.ReadFile("templates/server.js")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		tmpl := template.Must(template.New("server.js").Parse(string(jsTemplate)))
+
+		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0644)
+		defer jsFile.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		tmpl.Execute(jsFile, map[string]any{
+			"BinaryName": filepath.Base(*outputName),
+		})
+
+	}
 
 }

@@ -1,3 +1,5 @@
 *.c
 test.js
 *.wasm
+
+build/
