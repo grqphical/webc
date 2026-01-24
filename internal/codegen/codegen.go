@@ -31,7 +31,7 @@ const (
 	OpCodeI32SignedDivision byte = 0x6D
 )
 
-// Helper: Encodes unsigned integers (size, counts, indices)
+// Encodes unsigned integers (size, counts, indices)
 func encodeULEB128(n uint32) []byte {
 	var res []byte
 	for {
@@ -46,7 +46,7 @@ func encodeULEB128(n uint32) []byte {
 	return res
 }
 
-// Helper: Encodes signed integers (constants)
+// Encodes signed integers (constants)
 func encodeSLEB128(n int32) []byte {
 	var res []byte
 	for {
@@ -80,13 +80,9 @@ func (m *WASMModule) writeSection(id byte, payload []byte) {
 	m.buffer.Write(payload)
 }
 
-// 1. Type Section
-// Defines function signatures. For now, we assume all functions are () -> i32
 func (m *WASMModule) generateTypeSection() {
 	typePayload := bytes.Buffer{}
 
-	// We only define ONE signature type: () -> i32
-	// Even if we have 10 functions, if they all share this signature, we only need one type def.
 	typePayload.Write(encodeULEB128(1)) // count of types
 
 	typePayload.WriteByte(0x60)         // function type
@@ -97,15 +93,12 @@ func (m *WASMModule) generateTypeSection() {
 	m.writeSection(SecType, typePayload.Bytes())
 }
 
-// 2. Function Section
-// Maps every function body (in Code section) to a Type signature (in Type section)
 func (m *WASMModule) generateFunctionSection() {
 	funcPayload := bytes.Buffer{}
 	count := uint32(len(m.program.Functions))
 
 	funcPayload.Write(encodeULEB128(count))
 
-	// For every function in our program, assign it Type Index 0 (which is () -> i32)
 	for range m.program.Functions {
 		funcPayload.Write(encodeULEB128(0))
 	}
@@ -113,8 +106,6 @@ func (m *WASMModule) generateFunctionSection() {
 	m.writeSection(SecFunction, funcPayload.Bytes())
 }
 
-// 3. Export Section
-// Exports the function named "main" so the host (JS) can call it
 func (m *WASMModule) generateExportSection() {
 	exportPayload := bytes.Buffer{}
 	exportPayload.Write(encodeULEB128(1)) // Number of exports
@@ -142,8 +133,6 @@ func (m *WASMModule) generateExportSection() {
 	m.writeSection(SecExport, exportPayload.Bytes())
 }
 
-// 4. Code Section
-// The actual compiled machine code
 func (m *WASMModule) generateCodeSection() error {
 	codePayload := bytes.Buffer{}
 	codePayload.Write(encodeULEB128(uint32(len(m.program.Functions))))
@@ -170,7 +159,6 @@ func (m *WASMModule) generateCodeSection() error {
 
 		funcBody.WriteByte(OpCodeEnd)
 
-		// Write size of this function body + content to payload
 		codePayload.Write(encodeULEB128(uint32(funcBody.Len())))
 		codePayload.Write(funcBody.Bytes())
 	}
