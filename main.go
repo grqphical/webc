@@ -13,13 +13,21 @@ import (
 	"github.com/grqphical/webc/internal/parser"
 )
 
+const version string = "v0.0.1-alpha"
+
 //go:embed templates/*
 var templateFS embed.FS
 
 func main() {
 	compileForServer := flag.Bool("s", false, "Whether or not the runtime should be for the server instead of the browser")
 	outputName := flag.String("o", "output.wasm", "Name/path of output binary")
+	versionFlag := flag.Bool("v", false, "Prints the version")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("webc %s\n", version)
+		return
+	}
 
 	if len(flag.Args()) != 1 {
 		fmt.Fprintf(os.Stderr, "missing input file\n")
