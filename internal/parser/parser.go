@@ -6,6 +6,13 @@ import (
 	"github.com/grqphical/webc/internal/lexer"
 )
 
+type ValueType = string
+
+const (
+	TypeInt   ValueType = "int"
+	TypeFloat ValueType = "float"
+)
+
 func isBinaryOperator(token lexer.Token) bool {
 	return token.Type == lexer.TK_DASH || token.Type == lexer.TK_PLUS || token.Type == lexer.TK_SLASH || token.Type == lexer.TK_STAR
 }
@@ -27,21 +34,23 @@ type Symbol struct {
 	Type  string
 }
 
-type Node any
+type Node interface {
+	GetType() ValueType
+}
 
 type Program struct {
 	Functions []FunctionDecl
 }
 
 type FunctionDecl struct {
-	Type            string
+	Type            ValueType
 	Name            string
 	Body            Block
 	SymbolTable     map[string]Symbol
 	NextSymbolIndex int
 }
 
-func (f *FunctionDecl) DefineSymbol(name string, typeName string) Symbol {
+func (f *FunctionDecl) DefineSymbol(name string, typeName ValueType) Symbol {
 	sym := Symbol{
 		Index: f.NextSymbolIndex,
 		Type:  typeName,
@@ -64,17 +73,35 @@ type ReturnStmt struct {
 	Value Node
 }
 
+func (r ReturnStmt) GetType() ValueType {
+	return r.Value.GetType()
+}
+
 type VariableDefineStmt struct {
 	Symbol Symbol
 	Value  Node
+	Type   ValueType
+}
+
+func (v VariableDefineStmt) GetType() ValueType {
+	return v.GetType()
 }
 
 type Constant struct {
 	Value string
+	Type  ValueType
+}
+
+func (c Constant) GetType() ValueType {
+	return c.Type
 }
 
 type VariableAccess struct {
 	Index int
+}
+
+func (v VariableAccess) GetType() ValueType {
+	return "i32"
 }
 
 type UnaryExpression struct {
@@ -82,10 +109,24 @@ type UnaryExpression struct {
 	Operation string
 }
 
+func (u UnaryExpression) GetType() ValueType {
+	return u.Value.GetType()
+}
+
 type BinaryExpression struct {
 	A         Node
 	Operation string
 	B         Node
+}
+
+func (b BinaryExpression) GetType() ValueType {
+	typeA := b.A.GetType()
+	typeB := b.B.GetType()
+
+	if typeA == TypeFloat || typeB == TypeFloat {
+		return TypeFloat
+	}
+	return TypeInt
 }
 
 type Parser struct {
@@ -166,8 +207,10 @@ func (p *Parser) parseStatement(f *FunctionDecl) (Node, error) {
 		return p.parseReturn(f)
 	case "int":
 		return p.parseVarAssign(f)
+	case "float":
+		return p.parseVarAssign(f)
 	default:
-		return nil, fmt.Errorf("invalid statement on line %d")
+		return nil, fmt.Errorf("invalid statement on line %d", p.getCurrentToken().Line)
 	}
 }
 
@@ -189,10 +232,11 @@ func (p *Parser) parseReturn(f *FunctionDecl) (Node, error) {
 }
 
 func (p *Parser) parseVarAssign(f *FunctionDecl) (Node, error) {
-	p.head++ // consume int (for now)
+	valueType := p.getCurrentToken().Literal
+	p.head++
 
 	name := p.getCurrentToken().Literal
-	sym := f.DefineSymbol(name, "int")
+	sym := f.DefineSymbol(name, valueType)
 	p.head++
 
 	if p.getCurrentToken().Literal == "=" {
@@ -261,10 +305,12 @@ func (p *Parser) parsePrimary(f *FunctionDecl) (Node, error) {
 	token := p.getCurrentToken()
 
 	switch token.Type {
-	case lexer.TK_NUMBER:
-		p.head++ // Consume the number
-		return Constant{Value: token.Literal}, nil
-
+	case lexer.TK_INTEGER:
+		p.head++
+		return Constant{Value: token.Literal, Type: TypeInt}, nil
+	case lexer.TK_FLOAT:
+		p.head++
+		return Constant{Value: token.Literal, Type: TypeFloat}, nil
 	case lexer.TK_IDENT:
 		p.head++ // Consume the identifier
 		sym, exists := f.GetSymbol(token.Literal)

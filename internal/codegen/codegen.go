@@ -2,8 +2,10 @@ package codegen
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 
@@ -20,16 +22,35 @@ const (
 )
 
 const (
-	OpCodeEnd               byte = 0x0B
-	OpCodeReturn            byte = 0x0F
+	OpCodeEnd    byte = 0x0B
+	OpCodeReturn byte = 0x0F
+
+	OpCodeLocalGet byte = 0x20
+	OpCodeLocalSet byte = 0x21
+
 	OpCodeI32Const          byte = 0x41
-	OpCodeLocalGet          byte = 0x20
-	OpCodeLocalSet          byte = 0x21
 	OpCodeI32Add            byte = 0x6A
 	OpCodeI32Sub            byte = 0x6B
 	OpCodeI32Mul            byte = 0x6C
 	OpCodeI32SignedDivision byte = 0x6D
+
+	OpCodeF32Const    byte = 0x43
+	OpCodeF32Neg      byte = 0x8C
+	OpCodeF32Add      byte = 0x92
+	OpCodeF32Sub      byte = 0x93
+	OpCodeF32Mul      byte = 0x94
+	OpCodeF32Division byte = 0x95
 )
+
+// encodeF32 converts a float32 to its 4-byte little-endian representation
+func encodeF32(f float32) []byte {
+	bits := math.Float32bits(f)
+
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, bits)
+
+	return buf
+}
 
 // Encodes unsigned integers (size, counts, indices)
 func encodeULEB128(n uint32) []byte {
@@ -82,14 +103,20 @@ func (m *WASMModule) writeSection(id byte, payload []byte) {
 
 func (m *WASMModule) generateTypeSection() {
 	typePayload := bytes.Buffer{}
+	typePayload.Write(encodeULEB128(uint32(len(m.program.Functions)))) // count of types
 
-	typePayload.Write(encodeULEB128(1)) // count of types
+	for _, f := range m.program.Functions {
 
-	typePayload.WriteByte(0x60)         // function type
-	typePayload.Write(encodeULEB128(0)) // Param count: 0
-	typePayload.Write(encodeULEB128(1)) // Result count: 1
-	typePayload.WriteByte(0x7F)         // result type: i32
-
+		typePayload.WriteByte(0x60)         // function type
+		typePayload.Write(encodeULEB128(0)) // Param count: 0
+		typePayload.Write(encodeULEB128(1)) // Result count: 1
+		switch f.Type {
+		case parser.TypeInt:
+			typePayload.WriteByte(0x7F)
+		case parser.TypeFloat:
+			typePayload.WriteByte(0x7D)
+		}
+	}
 	m.writeSection(SecType, typePayload.Bytes())
 }
 
@@ -185,39 +212,71 @@ func (m *WASMModule) generateStatement(stmt parser.Node, body *bytes.Buffer) err
 	}
 }
 
-// Recursively generates code for expressions (Post-Order Traversal)
 func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffer) {
 	switch t := value.(type) {
 
 	case parser.Constant:
-		body.WriteByte(OpCodeI32Const)
-		intValue, _ := strconv.Atoi(t.Value)
-		body.Write(encodeSLEB128(int32(intValue)))
+		if t.Type == parser.TypeInt {
+			body.WriteByte(OpCodeI32Const)
+			intValue, _ := strconv.Atoi(t.Value)
+			body.Write(encodeSLEB128(int32(intValue)))
+		} else if t.Type == parser.TypeFloat {
+			body.WriteByte(OpCodeF32Const)
+			floatValue, _ := strconv.ParseFloat(t.Value, 32)
+			body.Write(encodeF32(float32(floatValue)))
+		}
 
 	case parser.VariableAccess:
 		body.WriteByte(OpCodeLocalGet)
 		body.Write(encodeULEB128(uint32(t.Index)))
 
 	case parser.UnaryExpression:
-		// WASM doesn't have a "negate" opcode for i32, so we do (0 - value)
-		body.WriteByte(OpCodeI32Const)
-		body.Write(encodeSLEB128(0))
 		m.generateExpressionCode(t.Value, body)
-		body.WriteByte(OpCodeI32Sub)
+
+		// Check the type of the value being negated
+		if t.Value.GetType() == parser.TypeFloat {
+			// f32 has a direct 'neg' opcode
+			body.WriteByte(OpCodeF32Neg) // f32.neg
+		} else {
+			// i32 doesn't have neg, so we do (0 - x)
+			body.WriteByte(OpCodeI32Const)
+			body.Write(encodeSLEB128(0))
+			m.generateExpressionCode(t.Value, body) // Move this here for i32
+			body.WriteByte(OpCodeI32Sub)
+		}
 
 	case parser.BinaryExpression:
 		m.generateExpressionCode(t.A, body)
 		m.generateExpressionCode(t.B, body)
 
+		// Branching based on the type of the expression
+		isFloat := t.A.GetType() == parser.TypeFloat || t.B.GetType() == parser.TypeFloat
+
 		switch t.Operation {
 		case "+":
-			body.WriteByte(OpCodeI32Add)
+			if isFloat {
+				body.WriteByte(OpCodeF32Add)
+			} else {
+				body.WriteByte(OpCodeI32Add)
+			}
 		case "-":
-			body.WriteByte(OpCodeI32Sub)
+			if isFloat {
+				body.WriteByte(OpCodeF32Sub)
+			} else {
+				body.WriteByte(OpCodeI32Sub)
+			}
 		case "*":
-			body.WriteByte(OpCodeI32Mul)
+			if isFloat {
+				body.WriteByte(OpCodeF32Mul)
+			} else {
+				body.WriteByte(OpCodeI32Mul)
+			}
 		case "/":
-			body.WriteByte(OpCodeI32SignedDivision)
+			if isFloat {
+				body.WriteByte(OpCodeF32Division)
+			} else {
+				body.WriteByte(OpCodeI32SignedDivision)
+			}
 		}
 	}
 }

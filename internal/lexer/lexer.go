@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -27,7 +28,9 @@ type TokenType string
 const (
 	TK_KEYWORD TokenType = "KEYWORD"
 	TK_IDENT   TokenType = "IDENTIFIER"
-	TK_NUMBER  TokenType = "NUMBER"
+
+	TK_INTEGER TokenType = "INTEGER"
+	TK_FLOAT   TokenType = "FLOAT"
 
 	TK_LPAREN TokenType = "("
 	TK_RPAREN TokenType = ")"
@@ -47,6 +50,7 @@ const (
 
 var keywords map[string]any = map[string]any{
 	"int":    nil,
+	"float":  nil,
 	"return": nil,
 }
 
@@ -99,19 +103,32 @@ func (l *Lexer) makeLiteral() {
 
 }
 
-func (l *Lexer) makeNumber() {
+func (l *Lexer) makeNumber() error {
 	var literal strings.Builder
+	dotCount := 0
 
-	for isNumber(l.getCurrentChar()) {
+	for isNumber(l.getCurrentChar()) || l.getCurrentChar() == '.' {
+		if l.getCurrentChar() == '.' {
+			if dotCount != 0 {
+				return errors.New("invalid number literal")
+			}
+			dotCount += 1
+		}
 		literal.WriteString(string(l.getCurrentChar()))
 		l.head++
 	}
 
+	t := TK_INTEGER
+	if dotCount == 1 {
+		t = TK_FLOAT
+	}
+
 	l.tokens = append(l.tokens, Token{
-		Type:    TK_NUMBER,
+		Type:    t,
 		Literal: literal.String(),
 		Line:    l.lineCount,
 	})
+	return nil
 }
 
 func (l *Lexer) peek() byte {
