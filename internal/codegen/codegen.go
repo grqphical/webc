@@ -167,14 +167,23 @@ func (m *WASMModule) generateCodeSection() error {
 	for _, function := range m.program.Functions {
 		funcBody := bytes.Buffer{}
 
-		// --- Local Variable Declarations ---
-		localCount := uint32(len(function.SymbolTable))
-		if localCount > 0 {
-			funcBody.Write(encodeULEB128(1))          // 1 group of locals
-			funcBody.Write(encodeULEB128(localCount)) // count
-			funcBody.WriteByte(0x7F)                  // type i32
-		} else {
-			funcBody.Write(encodeULEB128(0)) // 0 groups of locals
+		intCount, floatCount := function.GetVariableCounts()
+		numGroups := uint32(0)
+		if intCount > 0 {
+			numGroups++
+		}
+		if floatCount > 0 {
+			numGroups++
+		}
+
+		funcBody.Write(encodeULEB128(numGroups))
+		if intCount > 0 {
+			funcBody.Write(encodeULEB128(uint32(intCount)))
+			funcBody.WriteByte(0x7F) // i32
+		}
+		if floatCount > 0 {
+			funcBody.Write(encodeULEB128(uint32(floatCount)))
+			funcBody.WriteByte(0x7D) // f32
 		}
 
 		// --- Instructions ---

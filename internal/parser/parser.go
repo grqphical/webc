@@ -31,7 +31,7 @@ func getPrecedence(token lexer.Token) int {
 
 type Symbol struct {
 	Index int
-	Type  string
+	Type  ValueType
 }
 
 type Node interface {
@@ -63,6 +63,22 @@ func (f *FunctionDecl) DefineSymbol(name string, typeName ValueType) Symbol {
 func (f *FunctionDecl) GetSymbol(name string) (Symbol, bool) {
 	sym, exists := f.SymbolTable[name]
 	return sym, exists
+}
+
+func (f *FunctionDecl) GetVariableCounts() (intCount int, floatCount int) {
+	floatCount = 0
+	intCount = 0
+
+	for _, sym := range f.SymbolTable {
+		switch sym.Type {
+		case TypeInt:
+			intCount++
+		case TypeFloat:
+			floatCount++
+		}
+	}
+
+	return
 }
 
 type Block struct {
@@ -98,10 +114,11 @@ func (c Constant) GetType() ValueType {
 
 type VariableAccess struct {
 	Index int
+	Type  ValueType
 }
 
 func (v VariableAccess) GetType() ValueType {
-	return "i32"
+	return v.Type
 }
 
 type UnaryExpression struct {
@@ -247,7 +264,11 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	stmt := VariableDefineStmt{Value: parsedExpr, Symbol: sym}
+	if parsedExpr.GetType() != valueType {
+		return nil, fmt.Errorf("cannot assign %s to %s on line %d", parsedExpr.GetType(), valueType, p.getCurrentToken().Line)
+	}
+
+	stmt := VariableDefineStmt{Value: parsedExpr, Symbol: sym, Type: valueType}
 
 	if p.getCurrentToken().Type != lexer.TK_SEMICOLON {
 		return nil, fmt.Errorf("missing semicolon on line %d", p.getCurrentToken().Line)
@@ -291,6 +312,10 @@ func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) (Node, erro
 			return nil, err
 		}
 
+		if lhs.GetType() != rhs.GetType() {
+			return nil, fmt.Errorf("cannot do binary expression between %s and %s on line %d", lhs.GetType(), rhs.GetType(), p.getCurrentToken().Line)
+		}
+
 		lhs = BinaryExpression{
 			A:         lhs,
 			Operation: op,
@@ -317,7 +342,7 @@ func (p *Parser) parsePrimary(f *FunctionDecl) (Node, error) {
 		if !exists {
 			return nil, fmt.Errorf("undeclared variable '%s' on line %d", token.Literal, token.Line)
 		}
-		return VariableAccess{Index: sym.Index}, nil
+		return VariableAccess{Index: sym.Index, Type: sym.Type}, nil
 
 	case lexer.TK_DASH:
 		// Handle Unary Minus (e.g. -5)
