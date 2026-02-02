@@ -1,4 +1,4 @@
-.PHONY: build format
+.PHONY: build format test
 
 export CGO_ENABLED=0
 
@@ -7,3 +7,6 @@ build:
 
 format:
 	@go fmt ./...
+
+test:
+	@go test ./...
