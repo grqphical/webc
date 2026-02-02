@@ -4,7 +4,6 @@
 
 [![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/grqphical/webc.svg)](https://github.com/grqphical/webc)
 [![GitHub license](https://img.shields.io/github/license/grqphical/webc.svg)](https://github.com/grqphical/webc/blob/master/LICENSE)
-[![GitHub release](https://img.shields.io/github/release/grqphical/webc.svg)](https://GitHub.com/grqphical/webc/releases/)
 
 webc is a compiler for C99 that outputs WASM and a JS runtime for both servers and browsers. The goal of webc is to create a runtime similar to native C that can be run either
 in the browser or on the server (with Node.js, Bun etc.) with features such as a virtual filesystem, C style error handling (errno), and support for signals from JavaScript.
