@@ -121,6 +121,16 @@ func (v VariableAccess) GetType() ValueType {
 	return v.Type
 }
 
+type VariableUpdateStmt struct {
+	Index int
+	Value Node
+	Type  ValueType
+}
+
+func (v VariableUpdateStmt) GetType() ValueType {
+	return v.Type
+}
+
 type UnaryExpression struct {
 	Value     Node
 	Operation string
@@ -219,6 +229,11 @@ func (p *Parser) parseBlock(f *FunctionDecl) (Block, error) {
 }
 
 func (p *Parser) parseStatement(f *FunctionDecl) (Node, error) {
+	if p.getCurrentToken().Type == lexer.TK_IDENT {
+		// variable update statement
+		return p.parseVariableUpdate(f)
+	}
+
 	switch p.getCurrentToken().Literal {
 	case "return":
 		return p.parseReturn(f)
@@ -229,6 +244,49 @@ func (p *Parser) parseStatement(f *FunctionDecl) (Node, error) {
 	default:
 		return nil, fmt.Errorf("invalid statement on line %d", p.getCurrentToken().Line)
 	}
+}
+
+func (p *Parser) parseVariableUpdate(f *FunctionDecl) (Node, error) {
+	name := p.getCurrentToken().Literal
+
+	sym, exists := f.GetSymbol(name)
+	if !exists {
+		return nil, fmt.Errorf("no variable defined named '%s' on line %d", name, p.getCurrentToken().Line)
+	}
+
+	p.head++ // consume variable name
+
+	operatorToken := p.getCurrentToken()
+
+	stmt := VariableUpdateStmt{
+		Index: sym.Index,
+		Type:  sym.Type,
+	}
+	p.head++ // consume assignment operator
+
+	value, err := p.parseExpression(f, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	switch operatorToken.Type {
+	case lexer.TK_EQUAL:
+		stmt.Value = value
+	case lexer.TK_PLUS_EQUAL:
+		stmt.Value = BinaryExpression{
+			A: VariableAccess{
+				Index: sym.Index,
+				Type:  sym.Type,
+			},
+			Operation: "+",
+
+			B: value,
+		}
+	default:
+		return nil, fmt.Errorf("invalid assignment operator on line %d", p.getCurrentToken().Line)
+	}
+
+	return stmt, nil
 }
 
 func (p *Parser) parseReturn(f *FunctionDecl) (Node, error) {

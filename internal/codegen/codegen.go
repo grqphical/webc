@@ -215,7 +215,11 @@ func (m *WASMModule) generateStatement(stmt parser.Node, body *bytes.Buffer) err
 		body.WriteByte(OpCodeLocalSet)
 		body.Write(encodeULEB128(uint32(s.Symbol.Index)))
 		return nil
-
+	case parser.VariableUpdateStmt:
+		m.generateExpressionCode(s.Value, body)
+		body.WriteByte(OpCodeLocalSet)
+		body.Write(encodeULEB128(uint32(s.Index)))
+		return nil
 	default:
 		return errors.New("unsupported statement type")
 	}

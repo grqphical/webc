@@ -45,6 +45,8 @@ const (
 	TK_STAR  TokenType = "*"
 	TK_SLASH TokenType = "/"
 
+	TK_PLUS_EQUAL TokenType = "+="
+
 	TK_EOF TokenType = "EOF"
 )
 
@@ -189,11 +191,20 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 			})
 			l.head++
 		case '+':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_PLUS,
-				Literal: "+",
-				Line:    l.lineCount,
-			})
+			if l.peek() == '=' {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_PLUS_EQUAL,
+					Literal: "+=",
+					Line:    l.lineCount,
+				})
+				l.head++
+			} else {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_PLUS,
+					Literal: "+",
+					Line:    l.lineCount,
+				})
+			}
 			l.head++
 		case '-':
 			l.tokens = append(l.tokens, Token{
