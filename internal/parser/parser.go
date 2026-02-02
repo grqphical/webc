@@ -11,7 +11,23 @@ type ValueType = string
 const (
 	TypeInt   ValueType = "int"
 	TypeFloat ValueType = "float"
+	TypeChar  ValueType = "char"
 )
+
+func isCompatibleOperationType(a ValueType, b ValueType) bool {
+	if a == b {
+		return true
+	}
+
+	switch a {
+	case TypeInt:
+		return b == TypeChar
+	case TypeChar:
+		return b == TypeInt
+	default:
+		return false
+	}
+}
 
 func isBinaryOperator(token lexer.Token) bool {
 	return token.Type == lexer.TK_DASH || token.Type == lexer.TK_PLUS || token.Type == lexer.TK_SLASH || token.Type == lexer.TK_STAR
@@ -75,6 +91,8 @@ func (f *FunctionDecl) GetVariableCounts() (intCount int, floatCount int) {
 			intCount++
 		case TypeFloat:
 			floatCount++
+		case TypeChar:
+			intCount++
 		}
 	}
 
@@ -241,6 +259,8 @@ func (p *Parser) parseStatement(f *FunctionDecl) (Node, error) {
 		return p.parseVarAssign(f)
 	case "float":
 		return p.parseVarAssign(f)
+	case "char":
+		return p.parseVarAssign(f)
 	default:
 		return nil, fmt.Errorf("invalid statement on line %d", p.getCurrentToken().Line)
 	}
@@ -352,7 +372,7 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if parsedExpr.GetType() != valueType {
+	if !isCompatibleOperationType(parsedExpr.GetType(), valueType) {
 		return nil, fmt.Errorf("cannot assign %s to %s on line %d", parsedExpr.GetType(), valueType, p.getCurrentToken().Line)
 	}
 
@@ -400,7 +420,7 @@ func (p *Parser) parseExpression(f *FunctionDecl, minPrecedence int) (Node, erro
 			return nil, err
 		}
 
-		if lhs.GetType() != rhs.GetType() {
+		if !isCompatibleOperationType(lhs.GetType(), rhs.GetType()) {
 			return nil, fmt.Errorf("cannot do binary expression between %s and %s on line %d", lhs.GetType(), rhs.GetType(), p.getCurrentToken().Line)
 		}
 
@@ -424,6 +444,9 @@ func (p *Parser) parsePrimary(f *FunctionDecl) (Node, error) {
 	case lexer.TK_FLOAT:
 		p.head++
 		return Constant{Value: token.Literal, Type: TypeFloat}, nil
+	case lexer.TK_CHAR_LITERAL:
+		p.head++
+		return Constant{Value: token.Literal, Type: TypeChar}, nil
 	case lexer.TK_IDENT:
 		p.head++ // Consume the identifier
 		sym, exists := f.GetSymbol(token.Literal)

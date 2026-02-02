@@ -29,8 +29,9 @@ const (
 	TK_KEYWORD TokenType = "KEYWORD"
 	TK_IDENT   TokenType = "IDENTIFIER"
 
-	TK_INTEGER TokenType = "INTEGER"
-	TK_FLOAT   TokenType = "FLOAT"
+	TK_INTEGER      TokenType = "INTEGER"
+	TK_FLOAT        TokenType = "FLOAT"
+	TK_CHAR_LITERAL TokenType = "CHAR"
 
 	TK_LPAREN TokenType = "("
 	TK_RPAREN TokenType = ")"
@@ -57,6 +58,7 @@ var keywords map[string]any = map[string]any{
 	"int":    nil,
 	"float":  nil,
 	"return": nil,
+	"char":   nil,
 }
 
 type Token struct {
@@ -85,8 +87,26 @@ func (l *Lexer) getCurrentChar() byte {
 	return l.source[l.head]
 }
 
-func (l *Lexer) makeLiteral() {
+func (l *Lexer) makeLiteral() error {
 	literal := ""
+
+	if l.getCurrentChar() == '\'' {
+		l.head++
+		c := l.getCurrentChar()
+
+		if l.peek() != '\'' {
+			return fmt.Errorf("unterminated character literal on line %d", l.lineCount)
+		}
+		l.head++
+
+		l.tokens = append(l.tokens, Token{
+			Type:    TK_CHAR_LITERAL,
+			Literal: string(c),
+			Line:    l.lineCount,
+		})
+		l.head++ // consume ;
+		return nil
+	}
 
 	for isLetter(l.getCurrentChar()) {
 		literal += string(l.getCurrentChar())
@@ -105,7 +125,7 @@ func (l *Lexer) makeLiteral() {
 		Literal: literal,
 		Line:    l.lineCount,
 	})
-
+	return nil
 }
 
 func (l *Lexer) makeNumber() error {
@@ -264,8 +284,11 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 			}
 
 		default:
-			if isLetter(tok) {
-				l.makeLiteral()
+			if isLetter(tok) || tok == '\'' {
+				err := l.makeLiteral()
+				if err != nil {
+					return nil, err
+				}
 			} else if isNumber(tok) {
 				l.makeNumber()
 			} else {

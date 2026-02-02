@@ -33,6 +33,7 @@ const (
 	OpCodeI32Sub            byte = 0x6B
 	OpCodeI32Mul            byte = 0x6C
 	OpCodeI32SignedDivision byte = 0x6D
+	OpCodeI32And            byte = 0x71
 
 	OpCodeF32Const    byte = 0x43
 	OpCodeF32Neg      byte = 0x8C
@@ -111,7 +112,7 @@ func (m *WASMModule) generateTypeSection() {
 		typePayload.Write(encodeULEB128(0)) // Param count: 0
 		typePayload.Write(encodeULEB128(1)) // Result count: 1
 		switch f.Type {
-		case parser.TypeInt:
+		case parser.TypeInt, parser.TypeChar:
 			typePayload.WriteByte(0x7F)
 		case parser.TypeFloat:
 			typePayload.WriteByte(0x7D)
@@ -209,7 +210,6 @@ func (m *WASMModule) generateStatement(stmt parser.Node, body *bytes.Buffer) err
 		m.generateExpressionCode(s.Value, body)
 		body.WriteByte(OpCodeReturn)
 		return nil
-
 	case parser.VariableDefineStmt:
 		m.generateExpressionCode(s.Value, body)
 		body.WriteByte(OpCodeLocalSet)
@@ -237,6 +237,10 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 			body.WriteByte(OpCodeF32Const)
 			floatValue, _ := strconv.ParseFloat(t.Value, 32)
 			body.Write(encodeF32(float32(floatValue)))
+		} else if t.Type == parser.TypeChar {
+			body.WriteByte(OpCodeI32Const)
+			intValue := int32(t.Value[0])
+			body.Write(encodeSLEB128(intValue))
 		}
 
 	case parser.VariableAccess:
@@ -244,10 +248,9 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 		body.Write(encodeULEB128(uint32(t.Index)))
 
 	case parser.UnaryExpression:
-		m.generateExpressionCode(t.Value, body)
-
 		// Check the type of the value being negated
 		if t.Value.GetType() == parser.TypeFloat {
+			m.generateExpressionCode(t.Value, body)
 			// f32 has a direct 'neg' opcode
 			body.WriteByte(OpCodeF32Neg) // f32.neg
 		} else {
@@ -291,6 +294,13 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 				body.WriteByte(OpCodeI32SignedDivision)
 			}
 		}
+	}
+
+	if value.GetType() == parser.TypeChar {
+		// make sure characters wrap around after 255
+		body.WriteByte(OpCodeI32Const)
+		body.Write(encodeSLEB128(255))
+		body.WriteByte(OpCodeI32And)
 	}
 }
 
