@@ -13,5 +13,18 @@ You can use `-s` to create a server runtime that can be run with Node.JS or a si
 
 You can use the `-o` flag to change where the output binary will be.
 
+## Features/Roadmap
+- [x] Main function
+- [x] Integer variables, arthimetic, and variable modification
+- [x] Floating point variables, arthimetic, and variable modification
+- [x] Character variables, arthimetic, and variable modification
+- [ ] Long (64 bit Integer) variables, arthimetic, and variable modification
+- [ ] Unsigned Integer/Long variables, arthimetic, and variable modification
+- [ ] If/Else-If/Else Statements
+- [ ] For/While loops
+- [ ] Functions
+- [ ] Preprocessor (include)
+- [ ] Dynamic Memory (malloc/free)
+
 ## License
 `webc` is licensed under the Apache 2.0 License
