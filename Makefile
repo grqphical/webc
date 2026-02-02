@@ -1,4 +1,4 @@
-.PHONY: build, format
+.PHONY: build format
 
 export CGO_ENABLED=0
 
