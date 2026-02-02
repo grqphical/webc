@@ -46,8 +46,9 @@ func getPrecedence(token lexer.Token) int {
 }
 
 type Symbol struct {
-	Index int
-	Type  ValueType
+	Index    int
+	Type     ValueType
+	Constant bool
 }
 
 type Node interface {
@@ -66,10 +67,11 @@ type FunctionDecl struct {
 	NextSymbolIndex int
 }
 
-func (f *FunctionDecl) DefineSymbol(name string, typeName ValueType) Symbol {
+func (f *FunctionDecl) DefineSymbol(name string, typeName ValueType, constant bool) Symbol {
 	sym := Symbol{
-		Index: f.NextSymbolIndex,
-		Type:  typeName,
+		Index:    f.NextSymbolIndex,
+		Type:     typeName,
+		Constant: constant,
 	}
 	f.SymbolTable[name] = sym
 	f.NextSymbolIndex++
@@ -112,9 +114,10 @@ func (r ReturnStmt) GetType() ValueType {
 }
 
 type VariableDefineStmt struct {
-	Symbol Symbol
-	Value  Node
-	Type   ValueType
+	Symbol   Symbol
+	Value    Node
+	Type     ValueType
+	Constant bool
 }
 
 func (v VariableDefineStmt) GetType() ValueType {
@@ -255,11 +258,7 @@ func (p *Parser) parseStatement(f *FunctionDecl) (Node, error) {
 	switch p.getCurrentToken().Literal {
 	case "return":
 		return p.parseReturn(f)
-	case "int":
-		return p.parseVarAssign(f)
-	case "float":
-		return p.parseVarAssign(f)
-	case "char":
+	case "int", "float", "char", "const":
 		return p.parseVarAssign(f)
 	default:
 		return nil, fmt.Errorf("invalid statement on line %d", p.getCurrentToken().Line)
@@ -272,6 +271,10 @@ func (p *Parser) parseVariableUpdate(f *FunctionDecl) (Node, error) {
 	sym, exists := f.GetSymbol(name)
 	if !exists {
 		return nil, fmt.Errorf("no variable defined named '%s' on line %d", name, p.getCurrentToken().Line)
+	}
+
+	if sym.Constant {
+		return nil, fmt.Errorf("cannot modify constant '%s' on line %d", name, p.getCurrentToken().Line)
 	}
 
 	p.head++ // consume variable name
@@ -357,11 +360,18 @@ func (p *Parser) parseReturn(f *FunctionDecl) (Node, error) {
 }
 
 func (p *Parser) parseVarAssign(f *FunctionDecl) (Node, error) {
+	constant := false
+
+	if p.getCurrentToken().Literal == "const" {
+		p.head++
+		constant = true
+	}
+
 	valueType := p.getCurrentToken().Literal
 	p.head++
 
 	name := p.getCurrentToken().Literal
-	sym := f.DefineSymbol(name, valueType)
+	sym := f.DefineSymbol(name, valueType, constant)
 	p.head++
 
 	if p.getCurrentToken().Literal == "=" {
@@ -376,7 +386,7 @@ func (p *Parser) parseVarAssign(f *FunctionDecl) (Node, error) {
 		return nil, fmt.Errorf("cannot assign %s to %s on line %d", parsedExpr.GetType(), valueType, p.getCurrentToken().Line)
 	}
 
-	stmt := VariableDefineStmt{Value: parsedExpr, Symbol: sym, Type: valueType}
+	stmt := VariableDefineStmt{Value: parsedExpr, Symbol: sym, Type: valueType, Constant: constant}
 
 	if p.getCurrentToken().Type != lexer.TK_SEMICOLON {
 		return nil, fmt.Errorf("missing semicolon on line %d", p.getCurrentToken().Line)

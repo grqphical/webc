@@ -59,6 +59,7 @@ var keywords map[string]any = map[string]any{
 	"float":  nil,
 	"return": nil,
 	"char":   nil,
+	"const":  nil,
 }
 
 type Token struct {
