@@ -45,7 +45,10 @@ const (
 	TK_STAR  TokenType = "*"
 	TK_SLASH TokenType = "/"
 
-	TK_PLUS_EQUAL TokenType = "+="
+	TK_PLUS_EQUAL   TokenType = "+="
+	TK_MINUS_EQUAL  TokenType = "-="
+	TK_TIMES_EQUAL  TokenType = "*="
+	TK_DIVIDE_EQUAL TokenType = "/="
 
 	TK_EOF TokenType = "EOF"
 )
@@ -207,18 +210,36 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 			}
 			l.head++
 		case '-':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_DASH,
-				Literal: "-",
-				Line:    l.lineCount,
-			})
+			if l.peek() == '=' {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_MINUS_EQUAL,
+					Literal: "-=",
+					Line:    l.lineCount,
+				})
+				l.head++
+			} else {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_DASH,
+					Literal: "-",
+					Line:    l.lineCount,
+				})
+			}
 			l.head++
 		case '*':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_STAR,
-				Literal: "*",
-				Line:    l.lineCount,
-			})
+			if l.peek() == '=' {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_TIMES_EQUAL,
+					Literal: "*=",
+					Line:    l.lineCount,
+				})
+				l.head++
+			} else {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_STAR,
+					Literal: "*",
+					Line:    l.lineCount,
+				})
+			}
 			l.head++
 		case '/':
 			if l.peek() == '/' {
@@ -226,6 +247,13 @@ func (l *Lexer) ParseSource() ([]Token, error) {
 				for l.getCurrentChar() != '\n' {
 					l.head++
 				}
+			} else if l.peek() == '=' {
+				l.tokens = append(l.tokens, Token{
+					Type:    TK_DIVIDE_EQUAL,
+					Literal: "/=",
+					Line:    l.lineCount,
+				})
+				l.head += 2
 			} else {
 				l.tokens = append(l.tokens, Token{
 					Type:    TK_SLASH,

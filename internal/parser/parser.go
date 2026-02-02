@@ -282,6 +282,36 @@ func (p *Parser) parseVariableUpdate(f *FunctionDecl) (Node, error) {
 
 			B: value,
 		}
+	case lexer.TK_MINUS_EQUAL:
+		stmt.Value = BinaryExpression{
+			A: VariableAccess{
+				Index: sym.Index,
+				Type:  sym.Type,
+			},
+			Operation: "-",
+
+			B: value,
+		}
+	case lexer.TK_TIMES_EQUAL:
+		stmt.Value = BinaryExpression{
+			A: VariableAccess{
+				Index: sym.Index,
+				Type:  sym.Type,
+			},
+			Operation: "*",
+
+			B: value,
+		}
+	case lexer.TK_DIVIDE_EQUAL:
+		stmt.Value = BinaryExpression{
+			A: VariableAccess{
+				Index: sym.Index,
+				Type:  sym.Type,
+			},
+			Operation: "/",
+
+			B: value,
+		}
 	default:
 		return nil, fmt.Errorf("invalid assignment operator on line %d", p.getCurrentToken().Line)
 	}
