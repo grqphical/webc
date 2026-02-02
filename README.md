@@ -42,7 +42,7 @@ You can use the `-o` flag to change where the output binary will be.
 - [ ] Static variables
 
 ## Contributions
-Any contribution is welcome, just make sure to run `make format` before you commit to ensure the code style remains consistent
+Any contribution is welcome, just make sure to run `make format` and `make test` before you commit to ensure the code style remains consistent and all the test cases pass
 
 ## License
 `webc` is licensed under the Apache 2.0 License
