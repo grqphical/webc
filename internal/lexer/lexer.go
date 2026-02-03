@@ -105,7 +105,6 @@ func (l *Lexer) makeLiteral() error {
 			Literal: string(c),
 			Line:    l.lineCount,
 		})
-		l.head++ // consume ;
 		return nil
 	}
 
