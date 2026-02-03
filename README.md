@@ -41,8 +41,17 @@ You can use the `-o` flag to change where the output binary will be.
 - [ ] Structs, Unions, Typedefs
 - [ ] Static variables
 
+## Development
+To build webc, run `make build`
+
+To run webc's tests, run `make test`. webc includes both unit tests and a custom integration test system for testing the output of functions in compiled WASM binaries.
+This system is inside of the `testing/` directory
+
 ## Contributions
-Any contribution is welcome, just make sure to run `make format` before you commit to ensure the code style remains consistent
+Any contribution is welcome, please make sure to go through the steps below before making a Pull Request:
+1. Any new code has tests (if necessary, which 99 times out of 100 it is)
+2. Make sure EVERY test passes by running `make test`
+3. Make sure the code is formatted by running `make format` (this does require `gofmt` which should come with every Go installation)
 
 ## License
 `webc` is licensed under the Apache 2.0 License

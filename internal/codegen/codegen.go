@@ -43,8 +43,8 @@ const (
 	OpCodeF32Division byte = 0x95
 )
 
-// encodeF32 converts a float32 to its 4-byte little-endian representation
-func encodeF32(f float32) []byte {
+// EncodeF32 converts a float32 to its 4-byte little-endian representation
+func EncodeF32(f float32) []byte {
 	bits := math.Float32bits(f)
 
 	buf := make([]byte, 4)
@@ -53,8 +53,8 @@ func encodeF32(f float32) []byte {
 	return buf
 }
 
-// Encodes unsigned integers (size, counts, indices)
-func encodeULEB128(n uint32) []byte {
+// Encodes unsigned integers to Little Endian Binary 128-bit format
+func EncodeULEB128(n uint32) []byte {
 	var res []byte
 	for {
 		b := byte(n & 0x7F)
@@ -68,8 +68,8 @@ func encodeULEB128(n uint32) []byte {
 	return res
 }
 
-// Encodes signed integers (constants)
-func encodeSLEB128(n int32) []byte {
+// Encodes signed integers to Little Endian Binary 128-bit format
+func EncodeSLEB128(n int32) []byte {
 	var res []byte
 	for {
 		b := byte(n & 0x7F)
@@ -98,19 +98,19 @@ func NewModule(program parser.Program) *WASMModule {
 
 func (m *WASMModule) writeSection(id byte, payload []byte) {
 	m.buffer.WriteByte(id)
-	m.buffer.Write(encodeULEB128(uint32(len(payload))))
+	m.buffer.Write(EncodeULEB128(uint32(len(payload))))
 	m.buffer.Write(payload)
 }
 
 func (m *WASMModule) generateTypeSection() {
 	typePayload := bytes.Buffer{}
-	typePayload.Write(encodeULEB128(uint32(len(m.program.Functions)))) // count of types
+	typePayload.Write(EncodeULEB128(uint32(len(m.program.Functions)))) // count of types
 
 	for _, f := range m.program.Functions {
 
 		typePayload.WriteByte(0x60)         // function type
-		typePayload.Write(encodeULEB128(0)) // Param count: 0
-		typePayload.Write(encodeULEB128(1)) // Result count: 1
+		typePayload.Write(EncodeULEB128(0)) // Param count: 0
+		typePayload.Write(EncodeULEB128(1)) // Result count: 1
 		switch f.Type {
 		case parser.TypeInt, parser.TypeChar:
 			typePayload.WriteByte(0x7F)
@@ -125,10 +125,10 @@ func (m *WASMModule) generateFunctionSection() {
 	funcPayload := bytes.Buffer{}
 	count := uint32(len(m.program.Functions))
 
-	funcPayload.Write(encodeULEB128(count))
+	funcPayload.Write(EncodeULEB128(count))
 
 	for range m.program.Functions {
-		funcPayload.Write(encodeULEB128(0))
+		funcPayload.Write(EncodeULEB128(0))
 	}
 
 	m.writeSection(SecFunction, funcPayload.Bytes())
@@ -136,7 +136,7 @@ func (m *WASMModule) generateFunctionSection() {
 
 func (m *WASMModule) generateExportSection() {
 	exportPayload := bytes.Buffer{}
-	exportPayload.Write(encodeULEB128(1)) // Number of exports
+	exportPayload.Write(EncodeULEB128(1)) // Number of exports
 
 	// Find the index of the "main" function
 	mainIndex := 0
@@ -153,17 +153,17 @@ func (m *WASMModule) generateExportSection() {
 		fmt.Println("Warning: No 'main' function found to export.")
 	}
 
-	exportPayload.Write(encodeULEB128(4))                 // Name length
+	exportPayload.Write(EncodeULEB128(4))                 // Name length
 	exportPayload.WriteString("main")                     // Name
 	exportPayload.WriteByte(0x00)                         // Export kind: Function
-	exportPayload.Write(encodeULEB128(uint32(mainIndex))) // Function Index
+	exportPayload.Write(EncodeULEB128(uint32(mainIndex))) // Function Index
 
 	m.writeSection(SecExport, exportPayload.Bytes())
 }
 
 func (m *WASMModule) generateCodeSection() error {
 	codePayload := bytes.Buffer{}
-	codePayload.Write(encodeULEB128(uint32(len(m.program.Functions))))
+	codePayload.Write(EncodeULEB128(uint32(len(m.program.Functions))))
 
 	for _, function := range m.program.Functions {
 		funcBody := bytes.Buffer{}
@@ -177,13 +177,13 @@ func (m *WASMModule) generateCodeSection() error {
 			numGroups++
 		}
 
-		funcBody.Write(encodeULEB128(numGroups))
+		funcBody.Write(EncodeULEB128(numGroups))
 		if intCount > 0 {
-			funcBody.Write(encodeULEB128(uint32(intCount)))
+			funcBody.Write(EncodeULEB128(uint32(intCount)))
 			funcBody.WriteByte(0x7F) // i32
 		}
 		if floatCount > 0 {
-			funcBody.Write(encodeULEB128(uint32(floatCount)))
+			funcBody.Write(EncodeULEB128(uint32(floatCount)))
 			funcBody.WriteByte(0x7D) // f32
 		}
 
@@ -196,7 +196,7 @@ func (m *WASMModule) generateCodeSection() error {
 
 		funcBody.WriteByte(OpCodeEnd)
 
-		codePayload.Write(encodeULEB128(uint32(funcBody.Len())))
+		codePayload.Write(EncodeULEB128(uint32(funcBody.Len())))
 		codePayload.Write(funcBody.Bytes())
 	}
 
@@ -213,12 +213,12 @@ func (m *WASMModule) generateStatement(stmt parser.Node, body *bytes.Buffer) err
 	case parser.VariableDefineStmt:
 		m.generateExpressionCode(s.Value, body)
 		body.WriteByte(OpCodeLocalSet)
-		body.Write(encodeULEB128(uint32(s.Symbol.Index)))
+		body.Write(EncodeULEB128(uint32(s.Symbol.Index)))
 		return nil
 	case parser.VariableUpdateStmt:
 		m.generateExpressionCode(s.Value, body)
 		body.WriteByte(OpCodeLocalSet)
-		body.Write(encodeULEB128(uint32(s.Index)))
+		body.Write(EncodeULEB128(uint32(s.Index)))
 		return nil
 	default:
 		return errors.New("unsupported statement type")
@@ -232,20 +232,20 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 		if t.Type == parser.TypeInt {
 			body.WriteByte(OpCodeI32Const)
 			intValue, _ := strconv.Atoi(t.Value)
-			body.Write(encodeSLEB128(int32(intValue)))
+			body.Write(EncodeSLEB128(int32(intValue)))
 		} else if t.Type == parser.TypeFloat {
 			body.WriteByte(OpCodeF32Const)
 			floatValue, _ := strconv.ParseFloat(t.Value, 32)
-			body.Write(encodeF32(float32(floatValue)))
+			body.Write(EncodeF32(float32(floatValue)))
 		} else if t.Type == parser.TypeChar {
 			body.WriteByte(OpCodeI32Const)
 			intValue := int32(t.Value[0])
-			body.Write(encodeSLEB128(intValue))
+			body.Write(EncodeSLEB128(intValue))
 		}
 
 	case parser.VariableAccess:
 		body.WriteByte(OpCodeLocalGet)
-		body.Write(encodeULEB128(uint32(t.Index)))
+		body.Write(EncodeULEB128(uint32(t.Index)))
 
 	case parser.UnaryExpression:
 		// Check the type of the value being negated
@@ -256,7 +256,7 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 		} else {
 			// i32 doesn't have neg, so we do (0 - x)
 			body.WriteByte(OpCodeI32Const)
-			body.Write(encodeSLEB128(0))
+			body.Write(EncodeSLEB128(0))
 			m.generateExpressionCode(t.Value, body) // Move this here for i32
 			body.WriteByte(OpCodeI32Sub)
 		}
@@ -299,7 +299,7 @@ func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffe
 	if value.GetType() == parser.TypeChar {
 		// make sure characters wrap around after 255
 		body.WriteByte(OpCodeI32Const)
-		body.Write(encodeSLEB128(255))
+		body.Write(EncodeSLEB128(255))
 		body.WriteByte(OpCodeI32And)
 	}
 }
