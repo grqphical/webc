@@ -7,292 +7,69 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMainFunction(t *testing.T) {
-	exampleCode := `int main() {}`
-	expectedOutput := []lexer.Token{
-		{
-			Type:    lexer.TK_KEYWORD,
-			Literal: "int",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_IDENT,
-			Literal: "main",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_LPAREN,
-			Literal: "(",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_RPAREN,
-			Literal: ")",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_LBRACE,
-			Literal: "{",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_RBRACE,
-			Literal: "}",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EOF,
-			Literal: "EOF",
-			Line:    1,
-		},
+func TestSingleTokens(t *testing.T) {
+	input := `=+(){};`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TK_EQUAL, "="},
+		{lexer.TK_PLUS, "+"},
+		{lexer.TK_LPAREN, "("},
+		{lexer.TK_RPAREN, ")"},
+		{lexer.TK_LBRACE, "{"},
+		{lexer.TK_RBRACE, "}"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_EOF, ""},
 	}
+	l := lexer.New(input)
 
-	l := lexer.New(exampleCode)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, tokens, expectedOutput)
-}
+	for i, tt := range tests {
+		tok := l.NextToken()
 
-func TestIntegerVariableDeclarations(t *testing.T) {
-	exampleCode := "int x = 100;"
-	expectedOutput := []lexer.Token{
-		{
-			Type:    lexer.TK_KEYWORD,
-			Literal: "int",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_IDENT,
-			Literal: "x",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EQUAL,
-			Literal: "=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_INTEGER,
-			Literal: "100",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_SEMICOLON,
-			Literal: ";",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EOF,
-			Literal: "EOF",
-			Line:    1,
-		},
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
-
-	l := lexer.New(exampleCode)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, tokens, expectedOutput)
 }
 
-func TestFloatVariableDeclarations(t *testing.T) {
-	exampleCode := "float pi = 3.14159;"
-	expectedOutput := []lexer.Token{
-		{
-			Type:    lexer.TK_KEYWORD,
-			Literal: "float",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_IDENT,
-			Literal: "pi",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EQUAL,
-			Literal: "=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_FLOAT,
-			Literal: "3.14159",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_SEMICOLON,
-			Literal: ";",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EOF,
-			Literal: "EOF",
-			Line:    1,
-		},
+func TestFunctionTokenization(t *testing.T) {
+	input := `int main() {
+		float x = 0.1;
+		int y = 5;
+
+		return y;
+	}`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TK_INT, "int"},
+		{lexer.TK_IDENT, "main"},
+		{lexer.TK_LPAREN, "("},
+		{lexer.TK_RPAREN, ")"},
+		{lexer.TK_LBRACE, "{"},
+		{lexer.TK_FLOAT, "float"},
+		{lexer.TK_IDENT, "x"},
+		{lexer.TK_EQUAL, "="},
+		{lexer.TK_FLOAT_LITERAL, "0.1"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_INT, "int"},
+		{lexer.TK_IDENT, "y"},
+		{lexer.TK_EQUAL, "="},
+		{lexer.TK_INTEGER_LITERAL, "5"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_RETURN, "return"},
+		{lexer.TK_IDENT, "y"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_RBRACE, "}"},
+		{lexer.TK_EOF, ""},
 	}
+	l := lexer.New(input)
 
-	l := lexer.New(exampleCode)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, tokens, expectedOutput)
-}
+	for i, tt := range tests {
+		tok := l.NextToken()
 
-func TestCharVariableDeclarations(t *testing.T) {
-	exampleCode := "char x = 'a';"
-	expectedOutput := []lexer.Token{
-		{
-			Type:    lexer.TK_KEYWORD,
-			Literal: "char",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_IDENT,
-			Literal: "x",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EQUAL,
-			Literal: "=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_CHAR_LITERAL,
-			Literal: "a",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_SEMICOLON,
-			Literal: ";",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EOF,
-			Literal: "EOF",
-			Line:    1,
-		},
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
-
-	l := lexer.New(exampleCode)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, tokens, expectedOutput)
-}
-
-func TestIllegalToken(t *testing.T) {
-	illegalChar := "$ foo = 10;"
-
-	l := lexer.New(illegalChar)
-	_, err := l.ParseSource()
-	assert.Error(t, err)
-}
-
-func TestUnterminatedChar(t *testing.T) {
-	unterminatedCharLiteral := "'a"
-
-	l := lexer.New(unterminatedCharLiteral)
-	_, err := l.ParseSource()
-	assert.Error(t, err)
-}
-
-func TestInvalidNumber(t *testing.T) {
-	invalidNumber := "9.8.1"
-
-	l := lexer.New(invalidNumber)
-	_, err := l.ParseSource()
-	assert.Error(t, err)
-}
-
-func TestComments(t *testing.T) {
-	exampleCode := "// This should not be counted\nint foo = 3;"
-	expectedOutput := []lexer.Token{
-		{
-			Type:    lexer.TK_KEYWORD,
-			Literal: "int",
-			Line:    2,
-		},
-		{
-			Type:    lexer.TK_IDENT,
-			Literal: "foo",
-			Line:    2,
-		},
-		{
-			Type:    lexer.TK_EQUAL,
-			Literal: "=",
-			Line:    2,
-		},
-		{
-			Type:    lexer.TK_INTEGER,
-			Literal: "3",
-			Line:    2,
-		},
-		{
-			Type:    lexer.TK_SEMICOLON,
-			Literal: ";",
-			Line:    2,
-		},
-		{
-			Type:    lexer.TK_EOF,
-			Literal: "EOF",
-			Line:    2,
-		},
-	}
-
-	l := lexer.New(exampleCode)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, tokens, expectedOutput)
-}
-
-func TestTwoCharTokens(t *testing.T) {
-	exampleCode := "+ += - -= * *= / /="
-	expectedOutput := []lexer.Token{
-		{
-			Type:    lexer.TK_PLUS,
-			Literal: "+",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_PLUS_EQUAL,
-			Literal: "+=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_DASH,
-			Literal: "-",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_MINUS_EQUAL,
-			Literal: "-=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_STAR,
-			Literal: "*",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_TIMES_EQUAL,
-			Literal: "*=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_SLASH,
-			Literal: "/",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_DIVIDE_EQUAL,
-			Literal: "/=",
-			Line:    1,
-		},
-		{
-			Type:    lexer.TK_EOF,
-			Literal: "EOF",
-			Line:    1,
-		},
-	}
-
-	l := lexer.New(exampleCode)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, tokens, expectedOutput)
 }

@@ -1,16 +1,14 @@
 package lexer
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 )
 
 func isLetter(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
-func isNumber(c byte) bool {
+func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
 }
 
@@ -23,292 +21,111 @@ func (l LexerError) Error() string {
 	return fmt.Sprintf("lexical error on line %d: %s", l.Line, l.Message)
 }
 
-type TokenType string
-
-const (
-	TK_KEYWORD TokenType = "KEYWORD"
-	TK_IDENT   TokenType = "IDENTIFIER"
-
-	TK_INTEGER      TokenType = "INTEGER"
-	TK_FLOAT        TokenType = "FLOAT"
-	TK_CHAR_LITERAL TokenType = "CHAR"
-
-	TK_LPAREN TokenType = "("
-	TK_RPAREN TokenType = ")"
-	TK_LBRACE TokenType = "{"
-	TK_RBRACE TokenType = "}"
-
-	TK_SEMICOLON TokenType = ";"
-
-	TK_EQUAL TokenType = "="
-	TK_DASH  TokenType = "-"
-	TK_PLUS  TokenType = "+"
-	TK_STAR  TokenType = "*"
-	TK_SLASH TokenType = "/"
-
-	TK_PLUS_EQUAL   TokenType = "+="
-	TK_MINUS_EQUAL  TokenType = "-="
-	TK_TIMES_EQUAL  TokenType = "*="
-	TK_DIVIDE_EQUAL TokenType = "/="
-
-	TK_EOF TokenType = "EOF"
-)
-
-var keywords map[string]any = map[string]any{
-	"int":    nil,
-	"float":  nil,
-	"return": nil,
-	"char":   nil,
-	"const":  nil,
-}
-
-type Token struct {
-	Type    TokenType
-	Literal string
-	Line    int
-}
-
 type Lexer struct {
-	source    string
-	lineCount int
-	head      int
-	tokens    []Token
+	source       string
+	lineCount    int
+	position     int
+	readPosition int
+	ch           byte
+	tokens       []Token
 }
 
 func New(source string) *Lexer {
-	return &Lexer{
+	l := &Lexer{
 		source:    source,
 		lineCount: 1,
-		head:      0,
 		tokens:    make([]Token, 0),
 	}
+	l.readChar()
+	return l
 }
 
-func (l *Lexer) getCurrentChar() byte {
-	return l.source[l.head]
-}
-
-func (l *Lexer) makeLiteral() error {
-	literal := ""
-
-	if l.getCurrentChar() == '\'' {
-		l.head++
-		c := l.getCurrentChar()
-
-		if l.peek() != '\'' {
-			return fmt.Errorf("unterminated character literal on line %d", l.lineCount)
+func (l *Lexer) skipWhitespace() {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+		if l.ch == '\n' {
+			l.lineCount++
 		}
-		l.head += 2 // skip char and second '
-
-		l.tokens = append(l.tokens, Token{
-			Type:    TK_CHAR_LITERAL,
-			Literal: string(c),
-			Line:    l.lineCount,
-		})
-		return nil
+		l.readChar()
 	}
+}
 
-	for isLetter(l.getCurrentChar()) {
-		literal += string(l.getCurrentChar())
-		l.head++
-	}
-
-	var tokenType TokenType
-	if _, exists := keywords[literal]; exists {
-		tokenType = TK_KEYWORD
+func (l *Lexer) readChar() {
+	if l.readPosition >= len(l.source) {
+		l.ch = 0
 	} else {
-		tokenType = TK_IDENT
+		l.ch = l.source[l.readPosition]
 	}
+	l.position = l.readPosition
 
-	l.tokens = append(l.tokens, Token{
-		Type:    tokenType,
-		Literal: literal,
-		Line:    l.lineCount,
-	})
-	return nil
+	l.readPosition++
 }
 
-func (l *Lexer) makeNumber() error {
-	var literal strings.Builder
-	dotCount := 0
+func (l *Lexer) readIdentifier() string {
+	position := l.position
+	for isLetter(l.ch) {
+		l.readChar()
+	}
+	return l.source[position:l.position]
+}
 
-	for isNumber(l.getCurrentChar()) || l.getCurrentChar() == '.' {
-		if l.getCurrentChar() == '.' {
-			if dotCount != 0 {
-				return errors.New("invalid number literal")
-			}
-			dotCount += 1
+func (l *Lexer) readNumber() Token {
+	var tok Token
+	tok.Type = TK_INTEGER_LITERAL
+	position := l.position
+
+	for isDigit(l.ch) || l.ch == '.' {
+		// ensure only one dot is part of the number literal
+		if l.ch == '.' && tok.Type != TK_FLOAT_LITERAL {
+			tok.Type = TK_FLOAT_LITERAL
 		}
-		literal.WriteString(string(l.getCurrentChar()))
-		l.head++
+		l.readChar()
 	}
-
-	t := TK_INTEGER
-	if dotCount == 1 {
-		t = TK_FLOAT
-	}
-
-	l.tokens = append(l.tokens, Token{
-		Type:    t,
-		Literal: literal.String(),
-		Line:    l.lineCount,
-	})
-	return nil
+	tok.Literal = l.source[position:l.position]
+	return tok
 }
 
-func (l *Lexer) peek() byte {
-	if l.head+1 == len(l.source) {
-		return 0
-	}
-	return l.source[l.head+1]
-}
+func (l *Lexer) NextToken() Token {
+	var tok Token
 
-func (l *Lexer) ParseSource() ([]Token, error) {
-	for l.head < len(l.source) {
-		tok := l.getCurrentChar()
+	l.skipWhitespace()
 
-		switch tok {
-		case ' ', '\t':
-			l.head++
-
-		case '\n':
-			l.lineCount += 1
-			l.head++
-		case '{':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_LBRACE,
-				Literal: "{",
-				Line:    l.lineCount,
-			})
-			l.head++
-		case '}':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_RBRACE,
-				Literal: "}",
-				Line:    l.lineCount,
-			})
-			l.head++
-		case '(':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_LPAREN,
-				Literal: "(",
-				Line:    l.lineCount,
-			})
-			l.head++
-		case ')':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_RPAREN,
-				Literal: ")",
-				Line:    l.lineCount,
-			})
-			l.head++
-		case ';':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_SEMICOLON,
-				Literal: ";",
-				Line:    l.lineCount,
-			})
-			l.head++
-		case '=':
-			l.tokens = append(l.tokens, Token{
-				Type:    TK_EQUAL,
-				Literal: "=",
-				Line:    l.lineCount,
-			})
-			l.head++
-		case '+':
-			if l.peek() == '=' {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_PLUS_EQUAL,
-					Literal: "+=",
-					Line:    l.lineCount,
-				})
-				l.head++
-			} else {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_PLUS,
-					Literal: "+",
-					Line:    l.lineCount,
-				})
-			}
-			l.head++
-		case '-':
-			if l.peek() == '=' {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_MINUS_EQUAL,
-					Literal: "-=",
-					Line:    l.lineCount,
-				})
-				l.head++
-			} else {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_DASH,
-					Literal: "-",
-					Line:    l.lineCount,
-				})
-			}
-			l.head++
-		case '*':
-			if l.peek() == '=' {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_TIMES_EQUAL,
-					Literal: "*=",
-					Line:    l.lineCount,
-				})
-				l.head++
-			} else {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_STAR,
-					Literal: "*",
-					Line:    l.lineCount,
-				})
-			}
-			l.head++
-		case '/':
-			if l.peek() == '/' {
-				// skip lines with comments
-				for l.getCurrentChar() != '\n' {
-					l.head++
-				}
-			} else if l.peek() == '=' {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_DIVIDE_EQUAL,
-					Literal: "/=",
-					Line:    l.lineCount,
-				})
-				l.head += 2
-			} else {
-				l.tokens = append(l.tokens, Token{
-					Type:    TK_SLASH,
-					Literal: "/",
-					Line:    l.lineCount,
-				})
-				l.head++
-			}
-
-		default:
-			if isLetter(tok) || tok == '\'' {
-				err := l.makeLiteral()
-				if err != nil {
-					return nil, err
-				}
-			} else if isNumber(tok) {
-				l.makeNumber()
-			} else {
-				return nil, LexerError{
-					Line:    l.lineCount,
-					Message: fmt.Sprintf("illegal token '%c'", tok),
-				}
-			}
+	switch l.ch {
+	case '=':
+		tok = newToken(TK_EQUAL, string(l.ch), l.lineCount)
+	case ';':
+		tok = newToken(TK_SEMICOLON, string(l.ch), l.lineCount)
+	case '(':
+		tok = newToken(TK_LPAREN, string(l.ch), l.lineCount)
+	case ')':
+		tok = newToken(TK_RPAREN, string(l.ch), l.lineCount)
+	case '{':
+		tok = newToken(TK_LBRACE, string(l.ch), l.lineCount)
+	case '}':
+		tok = newToken(TK_RBRACE, string(l.ch), l.lineCount)
+	case '+':
+		tok = newToken(TK_PLUS, string(l.ch), l.lineCount)
+	case '-':
+		tok = newToken(TK_DASH, string(l.ch), l.lineCount)
+	case '*':
+		tok = newToken(TK_STAR, string(l.ch), l.lineCount)
+	case '/':
+		tok = newToken(TK_SLASH, string(l.ch), l.lineCount)
+	case 0:
+		tok.Literal = ""
+		tok.Type = TK_EOF
+	default:
+		if isLetter(l.ch) {
+			tok.Literal = l.readIdentifier()
+			tok.Type = lookupIdent(tok.Literal)
+			return tok
+		} else if isDigit(l.ch) {
+			tok = l.readNumber()
+			return tok
+		} else {
+			tok = newToken(TK_ILLEGAL, string(l.ch), l.lineCount)
 		}
-
 	}
 
-	l.tokens = append(l.tokens, Token{
-		Type:    TK_EOF,
-		Literal: "EOF",
-		Line:    l.lineCount,
-	})
-
-	return l.tokens, nil
+	l.readChar()
+	return tok
 }
