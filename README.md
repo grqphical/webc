@@ -54,5 +54,7 @@ Any contribution is welcome, please make sure to go through the steps below befo
 2. Make sure EVERY test passes by running `make test`
 3. Make sure the code is formatted by running `make format` (this does require `gofmt` which should come with every Go installation)
 
+You can view the full guidelines in [CONTRIBUTING.md](/CONTRIBUTING.md)
+
 ## License
 `webc` is licensed under the Apache 2.0 License

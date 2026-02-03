@@ -38,5 +38,11 @@ Unit tests should be included in a file inside of it's respective package. The f
 
 Integration tests (testing pre-built binaries) should be placed inside of the `testing/` folder
 
+## Pull Request Guidelines
+- Make sure Pull Requests have a focused scope, focus one on feature or bug fix.
+- Write descriptive commit messages
+- All new features must have tests
+- Ensure that all CI checks pass
+
 ## Bug Reports/Feature Requests
 I have included templates for these kinds of issues, when you create a new issue you should be able to select a template
