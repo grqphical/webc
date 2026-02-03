@@ -43,7 +43,13 @@ You can use the `-o` flag to change where the output binary will be.
 - [ ] Static variables
 
 ## Development
-To build webc, run `make build`
+To build webc for your current platform, run `make build`
+
+Thanks to Go's ability to cross-compile, you can create builds for other platforms/architectures!
+
+To build every binary for every supported platform, run `make build-all`
+
+To build a binary for a specific platform, run `make build-target OS=os ARCH=arch`. If you wanted to build a binary for MacOS on arm64 you would set `OS=darwin` and `ARCH=arm64`
 
 To run webc's tests, run `make test`. webc includes both unit tests and a custom integration test system for testing the output of functions in compiled WASM binaries.
 This system is inside of the `testing/` directory

@@ -38,6 +38,32 @@ Unit tests should be included in a file inside of it's respective package. The f
 
 Integration tests (testing pre-built binaries) should be placed inside of the `testing/` folder
 
+## Makefile Actions
+### `make test`
+Runs all unit/integration tests
+
+### `make format`
+Runs the formatters, I recommend having this run as a pre-commit hook
+
+### `make build`
+Builds a binary for your current platform
+
+### `make build-all`
+Build a binary for every supported platform/architecture
+
+### `make build-target OS=os ARCH=arch`
+Builds a binary for a specific platform, thanks to Go's cross compilation capabilities
+
+Below is a table of the commands for every supported OS/Architecture:
+
+| OS      | Architecture          | Command                                 |
+|---------|-----------------------|-----------------------------------------|
+| Windows | x86_64                | make build-target OS=windows ARCH=amd64 |
+| Linux   | x86_64                | make build-target OS=linux ARCH=amd64   |
+| Linux   | arm64                 | make build-target OS=linux ARCH=arm64   |
+| MacOS   | amd64                 | make build-target OS=darwin ARCH=amd64  |
+| MacOS   | arm64 (Apple Silicon) | make build-target OS=darwin ARCH=arm64  |
+
 ## Pull Request Guidelines
 - Make sure Pull Requests have a focused scope, focus one on feature or bug fix.
 - Write descriptive commit messages

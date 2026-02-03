@@ -3,6 +3,7 @@ index.js
 *.wasm
 
 build/
+bin/
 webc
 
 temp
