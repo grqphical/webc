@@ -7,6 +7,7 @@ build:
 
 format:
 	@go fmt ./...
+	@npx prettier ./templates --write
 
 test:
 	@go test -v ./...

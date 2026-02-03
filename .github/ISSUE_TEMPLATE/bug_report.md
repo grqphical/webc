@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 **Platform and webc version/commit hash**
-Debian Linux 13, amd64, v0.1.0-beta
+eg. Debian Linux 13, amd64, v0.1.0-beta
 
 **Describe the bug**
 A clear and concise description of what the bug is.

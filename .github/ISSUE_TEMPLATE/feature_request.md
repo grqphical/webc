@@ -7,11 +7,11 @@ assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Feature Abstract:** One short sentence summarizing the feature
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Why is this needed?/Why should this be included in webc?:**
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**Details about feature:**
+
+**Implementation Ideas:**
+- e.g. Use `SomeFunction()` from `foo/bar` in the stdlib
