@@ -21,14 +21,12 @@ func TestWASMIntegerReturn(t *testing.T) {
 	}`
 
 	l := lexer.New(source)
-	tokens := l.Parse()
 
-	p := parser.New(tokens)
-	program, err := p.Parse()
-	assert.NoError(t, err)
+	p := parser.New(l)
+	program := p.ParseProgram()
 
 	module := codegen.NewModule(program)
-	err = module.Generate()
+	err := module.Generate()
 	assert.NoError(t, err)
 	err = module.Save("temp/integer_return.wasm")
 	assert.NoError(t, err)

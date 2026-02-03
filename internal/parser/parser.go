@@ -46,7 +46,7 @@ func (p *Parser) expectPeek(t lexer.TokenType) bool {
 
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
-	case lexer.TK_INT, lexer.TK_FLOAT, lexer.TK_CHAR:
+	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword:
 		return p.parseVariableDefineStatement()
 	default:
 		return nil
@@ -56,22 +56,22 @@ func (p *Parser) parseStatement() ast.Statement {
 func (p *Parser) parseVariableDefineStatement() ast.Statement {
 	stmt := &ast.VariableDefineStatement{Token: p.curToken, Type: ast.ValueType(p.curToken.Literal)}
 
-	if !p.expectPeek(lexer.TK_IDENT) {
+	if !p.expectPeek(lexer.TokenIdent) {
 		return nil
 	}
 
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
-	if p.expectPeek(lexer.TK_SEMICOLON) {
+	if p.expectPeek(lexer.TokenSemicolon) {
 		// just defining the variable to be uninitialized
 		return stmt
 	}
 
-	if !p.expectPeek(lexer.TK_EQUAL) {
+	if !p.expectPeek(lexer.TokenEqual) {
 		return nil
 	}
 
-	for !p.curTokenIs(lexer.TK_SEMICOLON) {
+	for !p.curTokenIs(lexer.TokenSemicolon) {
 		p.nextToken()
 	}
 
@@ -82,7 +82,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 	program.Statements = make([]ast.Statement, 0)
 
-	for p.curToken.Type != lexer.TK_EOF {
+	for p.curToken.Type != lexer.TokenEndOfFile {
 		stmt := p.parseStatement()
 		if stmt != nil {
 			program.Statements = append(program.Statements, stmt)

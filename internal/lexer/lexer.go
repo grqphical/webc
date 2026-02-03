@@ -74,13 +74,13 @@ func (l *Lexer) readIdentifier() string {
 // Tokenizes a number, determines if it's an integer or float literal and returns the token
 func (l *Lexer) readNumber() Token {
 	var tok Token
-	tok.Type = TK_INTEGER_LITERAL
+	tok.Type = TokenIntLiteral
 	position := l.position
 
 	for isDigit(l.ch) || l.ch == '.' {
 		// ensure only one dot is part of the number literal
-		if l.ch == '.' && tok.Type != TK_FLOAT_LITERAL {
-			tok.Type = TK_FLOAT_LITERAL
+		if l.ch == '.' && tok.Type != TokenFloatLiteral {
+			tok.Type = TokenFloatLiteral
 		}
 		l.readChar()
 	}
@@ -116,59 +116,59 @@ func (l *Lexer) NextToken() Token {
 
 	switch l.ch {
 	case '=':
-		tok = newToken(TK_EQUAL, string(l.ch), l.lineCount)
+		tok = newToken(TokenEqual, string(l.ch), l.lineCount)
 	case ';':
-		tok = newToken(TK_SEMICOLON, string(l.ch), l.lineCount)
+		tok = newToken(TokenSemicolon, string(l.ch), l.lineCount)
 	case '(':
-		tok = newToken(TK_LPAREN, string(l.ch), l.lineCount)
+		tok = newToken(TokenLParen, string(l.ch), l.lineCount)
 	case ')':
-		tok = newToken(TK_RPAREN, string(l.ch), l.lineCount)
+		tok = newToken(TokenRParen, string(l.ch), l.lineCount)
 	case '{':
-		tok = newToken(TK_LBRACE, string(l.ch), l.lineCount)
+		tok = newToken(TokenLBrace, string(l.ch), l.lineCount)
 	case '}':
-		tok = newToken(TK_RBRACE, string(l.ch), l.lineCount)
+		tok = newToken(TokenRBrace, string(l.ch), l.lineCount)
 	case '+':
 		if l.peekChar() == '=' {
 			ch := l.ch
 			l.readChar()
-			tok = newToken(TK_PLUS_EQUAL, string(ch)+string(l.ch), l.lineCount)
+			tok = newToken(TokenPlusEqual, string(ch)+string(l.ch), l.lineCount)
 		} else {
-			tok = newToken(TK_PLUS, string(l.ch), l.lineCount)
+			tok = newToken(TokenPlus, string(l.ch), l.lineCount)
 		}
 	case '-':
 		if l.peekChar() == '=' {
 			ch := l.ch
 			l.readChar()
-			tok = newToken(TK_MINUS_EQUAL, string(ch)+string(l.ch), l.lineCount)
+			tok = newToken(TokenMinusEqual, string(ch)+string(l.ch), l.lineCount)
 		} else {
-			tok = newToken(TK_DASH, string(l.ch), l.lineCount)
+			tok = newToken(TokenDash, string(l.ch), l.lineCount)
 		}
 	case '*':
 		if l.peekChar() == '=' {
 			ch := l.ch
 			l.readChar()
-			tok = newToken(TK_TIMES_EQUAL, string(ch)+string(l.ch), l.lineCount)
+			tok = newToken(TokenTimesEqual, string(ch)+string(l.ch), l.lineCount)
 		} else {
-			tok = newToken(TK_STAR, string(l.ch), l.lineCount)
+			tok = newToken(TokenStar, string(l.ch), l.lineCount)
 		}
 	case '/':
 		if l.peekChar() == '=' {
 			ch := l.ch
 			l.readChar()
-			tok = newToken(TK_DIVIDE_EQUAL, string(ch)+string(l.ch), l.lineCount)
+			tok = newToken(TokenDivideEqual, string(ch)+string(l.ch), l.lineCount)
 		} else if l.peekChar() == '/' {
 			// skip lines with comments on them
 			l.readComment()
 			return l.NextToken()
 		} else {
-			tok = newToken(TK_SLASH, string(l.ch), l.lineCount)
+			tok = newToken(TokenSlash, string(l.ch), l.lineCount)
 		}
 	case '\'':
-		tok.Type = TK_CHAR_LITERAL
+		tok.Type = TokenCharLiteral
 		tok.Literal = l.readCharLiteral()
 	case 0:
 		tok.Literal = ""
-		tok.Type = TK_EOF
+		tok.Type = TokenEndOfFile
 	default:
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
@@ -178,7 +178,7 @@ func (l *Lexer) NextToken() Token {
 			tok = l.readNumber()
 			return tok
 		} else {
-			tok = newToken(TK_ILLEGAL, string(l.ch), l.lineCount)
+			tok = newToken(TokenIllegal, string(l.ch), l.lineCount)
 		}
 	}
 
@@ -193,7 +193,7 @@ func (l *Lexer) Parse() []Token {
 		tok := l.NextToken()
 		toks = append(toks, tok)
 
-		if tok.Type == TK_EOF {
+		if tok.Type == TokenEndOfFile {
 			break
 		}
 	}
