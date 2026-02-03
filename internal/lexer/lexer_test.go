@@ -175,3 +175,27 @@ func TestCharVariableDeclarations(t *testing.T) {
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, tokens, expectedOutput)
 }
+
+func TestIllegalToken(t *testing.T) {
+	illegalChar := "$ foo = 10;"
+
+	l := lexer.New(illegalChar)
+	_, err := l.ParseSource()
+	assert.Error(t, err)
+}
+
+func TestUnterminatedChar(t *testing.T) {
+	unterminatedCharLiteral := "'a"
+
+	l := lexer.New(unterminatedCharLiteral)
+	_, err := l.ParseSource()
+	assert.Error(t, err)
+}
+
+func TestInvalidNumber(t *testing.T) {
+	invalidNumber := "9.8.1"
+
+	l := lexer.New(invalidNumber)
+	_, err := l.ParseSource()
+	assert.Error(t, err)
+}

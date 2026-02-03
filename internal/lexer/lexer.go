@@ -158,6 +158,9 @@ func (l *Lexer) makeNumber() error {
 }
 
 func (l *Lexer) peek() byte {
+	if l.head+1 == len(l.source) {
+		return 0
+	}
 	return l.source[l.head+1]
 }
 
