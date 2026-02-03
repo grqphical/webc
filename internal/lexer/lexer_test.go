@@ -81,3 +81,68 @@ func TestFunctionTokenization(t *testing.T) {
 		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
 }
+
+func TestTwoCharTokens(t *testing.T) {
+	input := `int main() {
+		int x = 10;
+		x += 10;
+
+		return x;
+	}`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TK_INT, "int"},
+		{lexer.TK_IDENT, "main"},
+		{lexer.TK_LPAREN, "("},
+		{lexer.TK_RPAREN, ")"},
+		{lexer.TK_LBRACE, "{"},
+		{lexer.TK_INT, "int"},
+		{lexer.TK_IDENT, "x"},
+		{lexer.TK_EQUAL, "="},
+		{lexer.TK_INTEGER_LITERAL, "10"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_IDENT, "x"},
+		{lexer.TK_PLUS_EQUAL, "+="},
+		{lexer.TK_INTEGER_LITERAL, "10"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_RETURN, "return"},
+		{lexer.TK_IDENT, "x"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_RBRACE, "}"},
+		{lexer.TK_EOF, ""},
+	}
+	l := lexer.New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
+	}
+}
+
+func TestComments(t *testing.T) {
+	input := `// int main()
+	int x = 5;`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TK_INT, "int"},
+		{lexer.TK_IDENT, "x"},
+		{lexer.TK_EQUAL, "="},
+		{lexer.TK_INTEGER_LITERAL, "5"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_EOF, ""},
+	}
+	l := lexer.New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
+	}
+}

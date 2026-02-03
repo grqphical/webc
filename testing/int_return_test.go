@@ -15,6 +15,8 @@ func TestWASMIntegerReturn(t *testing.T) {
 	source := `int main() {
 		int x = 10;
 
+		x += 10;
+
 		return x;
 	}`
 
@@ -31,7 +33,7 @@ func TestWASMIntegerReturn(t *testing.T) {
 	err = module.Save("temp/integer_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 10)
+	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 20)
 }
 
 func init() {

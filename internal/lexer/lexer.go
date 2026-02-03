@@ -60,6 +60,14 @@ func (l *Lexer) readChar() {
 	l.readPosition++
 }
 
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.source) {
+		return 0
+	} else {
+		return l.source[l.readPosition]
+	}
+}
+
 func (l *Lexer) readIdentifier() string {
 	position := l.position
 	for isLetter(l.ch) {
@@ -96,6 +104,12 @@ func (l *Lexer) readCharLiteral() string {
 	return l.source[position:l.position]
 }
 
+func (l *Lexer) readComment() {
+	for l.ch != '\n' {
+		l.readChar()
+	}
+}
+
 func (l *Lexer) NextToken() Token {
 	var tok Token
 
@@ -115,13 +129,41 @@ func (l *Lexer) NextToken() Token {
 	case '}':
 		tok = newToken(TK_RBRACE, string(l.ch), l.lineCount)
 	case '+':
-		tok = newToken(TK_PLUS, string(l.ch), l.lineCount)
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TK_PLUS_EQUAL, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TK_PLUS, string(l.ch), l.lineCount)
+		}
 	case '-':
-		tok = newToken(TK_DASH, string(l.ch), l.lineCount)
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TK_MINUS_EQUAL, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TK_DASH, string(l.ch), l.lineCount)
+		}
 	case '*':
-		tok = newToken(TK_STAR, string(l.ch), l.lineCount)
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TK_TIMES_EQUAL, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TK_STAR, string(l.ch), l.lineCount)
+		}
 	case '/':
-		tok = newToken(TK_SLASH, string(l.ch), l.lineCount)
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TK_DIVIDE_EQUAL, string(ch)+string(l.ch), l.lineCount)
+		} else if l.peekChar() == '/' {
+			// skip lines with comments on them
+			l.readComment()
+			return l.NextToken()
+		} else {
+			tok = newToken(TK_SLASH, string(l.ch), l.lineCount)
+		}
 	case '\'':
 		tok.Type = TK_CHAR_LITERAL
 		tok.Literal = l.readCharLiteral()
