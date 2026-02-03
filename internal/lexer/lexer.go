@@ -1,13 +1,16 @@
 package lexer
 
+// checks if the given byte is a letter (lower/upper case)
 func isLetter(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
+// checks if the given byte is a digit
 func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
 }
 
+// Lexer stores the current state of the lexer
 type Lexer struct {
 	source       string
 	lineCount    int
@@ -17,6 +20,7 @@ type Lexer struct {
 	tokens       []Token
 }
 
+// Creates a new lexer
 func New(source string) *Lexer {
 	l := &Lexer{
 		source:    source,
@@ -27,6 +31,7 @@ func New(source string) *Lexer {
 	return l
 }
 
+// Skips all whitespace until it hits a non whitespace character
 func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		if l.ch == '\n' {
@@ -36,6 +41,7 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
+// Advances the lexer
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.source) {
 		l.ch = 0
@@ -47,6 +53,7 @@ func (l *Lexer) readChar() {
 	l.readPosition++
 }
 
+// Returns the next character in the source code. If the lexer is at the end of the source code, it returns `\0`
 func (l *Lexer) peekChar() byte {
 	if l.readPosition >= len(l.source) {
 		return 0
@@ -55,6 +62,7 @@ func (l *Lexer) peekChar() byte {
 	}
 }
 
+// Tokenizes an identifier
 func (l *Lexer) readIdentifier() string {
 	position := l.position
 	for isLetter(l.ch) {
@@ -63,6 +71,7 @@ func (l *Lexer) readIdentifier() string {
 	return l.source[position:l.position]
 }
 
+// Tokenizes a number, determines if it's an integer or float literal and returns the token
 func (l *Lexer) readNumber() Token {
 	var tok Token
 	tok.Type = TK_INTEGER_LITERAL
@@ -79,6 +88,7 @@ func (l *Lexer) readNumber() Token {
 	return tok
 }
 
+// Reads a C character literal, e.g. 'a'
 func (l *Lexer) readCharLiteral() string {
 	position := l.position + 1
 	for {
@@ -91,12 +101,14 @@ func (l *Lexer) readCharLiteral() string {
 	return l.source[position:l.position]
 }
 
+// Consumes the entire line, used when a comment is encountered
 func (l *Lexer) readComment() {
 	for l.ch != '\n' {
 		l.readChar()
 	}
 }
 
+// Creates a token based on the current character and then advances the lexer
 func (l *Lexer) NextToken() Token {
 	var tok Token
 
@@ -174,6 +186,7 @@ func (l *Lexer) NextToken() Token {
 	return tok
 }
 
+// Parses the entire source code, returning the tokens it generated
 func (l *Lexer) Parse() []Token {
 	toks := make([]Token, 0)
 	for {
