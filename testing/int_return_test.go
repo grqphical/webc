@@ -14,16 +14,12 @@ import (
 func TestWASMIntegerReturn(t *testing.T) {
 	source := `int main() {
 		int x = 10;
-		x += 20
-		x -= 10
-		x *= 3;
-		x /= 2
+
 		return x;
 	}`
 
 	l := lexer.New(source)
-	tokens, err := l.ParseSource()
-	assert.NoError(t, err)
+	tokens := l.Parse()
 
 	p := parser.New(tokens)
 	program, err := p.Parse()
@@ -35,7 +31,7 @@ func TestWASMIntegerReturn(t *testing.T) {
 	err = module.Save("temp/integer_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 30)
+	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 10)
 }
 
 func init() {

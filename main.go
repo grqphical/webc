@@ -42,7 +42,7 @@ func main() {
 	}
 
 	lexer := lexer.New(string(sourceCode))
-	tokens, err := lexer.ParseSource()
+	tokens := lexer.Parse()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)

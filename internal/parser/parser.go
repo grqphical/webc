@@ -448,10 +448,10 @@ func (p *Parser) parsePrimary(f *FunctionDecl) (Node, error) {
 	token := p.getCurrentToken()
 
 	switch token.Type {
-	case lexer.TK_INTEGER:
+	case lexer.TK_INTEGER_LITERAL:
 		p.head++
 		return Constant{Value: token.Literal, Type: TypeInt}, nil
-	case lexer.TK_FLOAT:
+	case lexer.TK_FLOAT_LITERAL:
 		p.head++
 		return Constant{Value: token.Literal, Type: TypeFloat}, nil
 	case lexer.TK_CHAR_LITERAL:
@@ -504,7 +504,7 @@ func (p *Parser) Parse() (Program, error) {
 
 	for p.head < len(p.tokens) {
 		tok := p.getCurrentToken()
-		if tok.Type == lexer.TK_KEYWORD || tok.Type == lexer.TK_IDENT {
+		if tok.Type == lexer.TK_INT || tok.Type == lexer.TK_CHAR || tok.Type == lexer.TK_FLOAT {
 			f, err := p.parseFunction()
 			if err != nil {
 				return Program{}, err

@@ -144,3 +144,16 @@ func (l *Lexer) NextToken() Token {
 	l.readChar()
 	return tok
 }
+
+func (l *Lexer) Parse() []Token {
+	toks := make([]Token, 0)
+	for {
+		tok := l.NextToken()
+		toks = append(toks, tok)
+
+		if tok.Type == TK_EOF {
+			break
+		}
+	}
+	return toks
+}
