@@ -9,6 +9,10 @@ import (
 	"github.com/tetratelabs/wazero"
 )
 
+// Reads a WASM binary, calls a function from it and check it's return value against the provided expected output.
+// Under the hood, it uses the testify/assert library to assert the equality check
+//
+// Should only be used in a testing environment (ie in a *_test.go file, ran under `go test`)
 func AssertWASMBinary(t *testing.T, binaryFile string, functionName string, expectedOutput any) {
 	ctx := context.Background()
 	runtime := wazero.NewRuntime(ctx)
