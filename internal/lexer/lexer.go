@@ -1,24 +1,11 @@
 package lexer
 
-import (
-	"fmt"
-)
-
 func isLetter(c byte) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
 func isDigit(c byte) bool {
 	return c >= '0' && c <= '9'
-}
-
-type LexerError struct {
-	Message string
-	Line    int
-}
-
-func (l LexerError) Error() string {
-	return fmt.Sprintf("lexical error on line %d: %s", l.Line, l.Message)
 }
 
 type Lexer struct {
