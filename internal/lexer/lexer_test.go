@@ -199,3 +199,100 @@ func TestInvalidNumber(t *testing.T) {
 	_, err := l.ParseSource()
 	assert.Error(t, err)
 }
+
+func TestComments(t *testing.T) {
+	exampleCode := "// This should not be counted\nint foo = 3;"
+	expectedOutput := []lexer.Token{
+		{
+			Type:    lexer.TK_KEYWORD,
+			Literal: "int",
+			Line:    2,
+		},
+		{
+			Type:    lexer.TK_IDENT,
+			Literal: "foo",
+			Line:    2,
+		},
+		{
+			Type:    lexer.TK_EQUAL,
+			Literal: "=",
+			Line:    2,
+		},
+		{
+			Type:    lexer.TK_INTEGER,
+			Literal: "3",
+			Line:    2,
+		},
+		{
+			Type:    lexer.TK_SEMICOLON,
+			Literal: ";",
+			Line:    2,
+		},
+		{
+			Type:    lexer.TK_EOF,
+			Literal: "EOF",
+			Line:    2,
+		},
+	}
+
+	l := lexer.New(exampleCode)
+	tokens, err := l.ParseSource()
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, tokens, expectedOutput)
+}
+
+func TestTwoCharTokens(t *testing.T) {
+	exampleCode := "+ += - -= * *= / /="
+	expectedOutput := []lexer.Token{
+		{
+			Type:    lexer.TK_PLUS,
+			Literal: "+",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_PLUS_EQUAL,
+			Literal: "+=",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_DASH,
+			Literal: "-",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_MINUS_EQUAL,
+			Literal: "-=",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_STAR,
+			Literal: "*",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_TIMES_EQUAL,
+			Literal: "*=",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_SLASH,
+			Literal: "/",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_DIVIDE_EQUAL,
+			Literal: "/=",
+			Line:    1,
+		},
+		{
+			Type:    lexer.TK_EOF,
+			Literal: "EOF",
+			Line:    1,
+		},
+	}
+
+	l := lexer.New(exampleCode)
+	tokens, err := l.ParseSource()
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, tokens, expectedOutput)
+}
