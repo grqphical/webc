@@ -1,25 +1,53 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/grqphical/webc/internal/ast"
 	"github.com/grqphical/webc/internal/lexer"
 )
+
+type ParseError struct {
+	message string
+	line    int
+}
+
+func (pe ParseError) Error() string {
+	return fmt.Sprintf("SyntaxError: %s, line: %d", pe.message, pe.line)
+}
 
 type Parser struct {
 	l *lexer.Lexer
 
 	curToken  lexer.Token
 	peekToken lexer.Token
+
+	errors []ParseError
 }
 
 func New(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l}
+	p := &Parser{
+		l:      l,
+		errors: make([]ParseError, 0),
+	}
 
 	// read the first two characters so that curToken and peekToken are set
 	p.nextToken()
 	p.nextToken()
 
 	return p
+}
+
+func (p *Parser) Errors() []ParseError {
+	return p.errors
+}
+
+func (p *Parser) peekError(t lexer.TokenType) {
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
+	p.errors = append(p.errors, ParseError{
+		message: msg,
+		line:    p.peekToken.Line,
+	})
 }
 
 func (p *Parser) nextToken() {
@@ -40,6 +68,7 @@ func (p *Parser) expectPeek(t lexer.TokenType) bool {
 		p.nextToken()
 		return true
 	} else {
+		p.peekError(t)
 		return false
 	}
 }
