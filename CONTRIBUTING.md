@@ -21,7 +21,7 @@ I use `gofmt` to format webc, it comes with `go` so there is no need to install 
 
 For any files in `templates/` (HTML and JS files), use `prettier` to format them (`npm install -g prettier`).
 
-`make test` should do all the formatting for you, you just need to make sure the formatters are instaled.
+`make format` should do all the formatting for you, you just need to make sure the formatters are instaled.
 
 ### File Organization
 `main.go` contains all functionality related to the compiler executable, things like compiler flags should be put into here
