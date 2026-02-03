@@ -84,6 +84,18 @@ func (l *Lexer) readNumber() Token {
 	return tok
 }
 
+func (l *Lexer) readCharLiteral() string {
+	position := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '\'' || l.ch == 0 {
+			break
+		}
+	}
+
+	return l.source[position:l.position]
+}
+
 func (l *Lexer) NextToken() Token {
 	var tok Token
 
@@ -110,6 +122,9 @@ func (l *Lexer) NextToken() Token {
 		tok = newToken(TK_STAR, string(l.ch), l.lineCount)
 	case '/':
 		tok = newToken(TK_SLASH, string(l.ch), l.lineCount)
+	case '\'':
+		tok.Type = TK_CHAR_LITERAL
+		tok.Literal = l.readCharLiteral()
 	case 0:
 		tok.Literal = ""
 		tok.Type = TK_EOF

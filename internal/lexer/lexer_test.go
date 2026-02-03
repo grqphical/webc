@@ -34,8 +34,9 @@ func TestSingleTokens(t *testing.T) {
 
 func TestFunctionTokenization(t *testing.T) {
 	input := `int main() {
-		float x = 0.1;
+		float x = 0.1 + 0.2;
 		int y = 5;
+		char z = 'a';
 
 		return y;
 	}`
@@ -52,11 +53,18 @@ func TestFunctionTokenization(t *testing.T) {
 		{lexer.TK_IDENT, "x"},
 		{lexer.TK_EQUAL, "="},
 		{lexer.TK_FLOAT_LITERAL, "0.1"},
+		{lexer.TK_PLUS, "+"},
+		{lexer.TK_FLOAT_LITERAL, "0.2"},
 		{lexer.TK_SEMICOLON, ";"},
 		{lexer.TK_INT, "int"},
 		{lexer.TK_IDENT, "y"},
 		{lexer.TK_EQUAL, "="},
 		{lexer.TK_INTEGER_LITERAL, "5"},
+		{lexer.TK_SEMICOLON, ";"},
+		{lexer.TK_CHAR, "char"},
+		{lexer.TK_IDENT, "z"},
+		{lexer.TK_EQUAL, "="},
+		{lexer.TK_CHAR_LITERAL, "a"},
 		{lexer.TK_SEMICOLON, ";"},
 		{lexer.TK_RETURN, "return"},
 		{lexer.TK_IDENT, "y"},
