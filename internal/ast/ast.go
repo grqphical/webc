@@ -2,6 +2,14 @@ package ast
 
 import "github.com/grqphical/webc/internal/lexer"
 
+type ValueType string
+
+const (
+	ValueTypeInt   ValueType = "int"
+	ValueTypeFloat ValueType = "float"
+	ValueTypeChar  ValueType = "char"
+)
+
 type Node interface {
 	TokenLiteral() string
 }
@@ -42,6 +50,7 @@ type VariableDefineStatement struct {
 	Token lexer.Token
 	Name  *Identifier
 	Value Expression
+	Type  ValueType
 }
 
 func (vds *VariableDefineStatement) statementNode() {}
