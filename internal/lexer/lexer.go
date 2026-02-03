@@ -98,7 +98,7 @@ func (l *Lexer) makeLiteral() error {
 		if l.peek() != '\'' {
 			return fmt.Errorf("unterminated character literal on line %d", l.lineCount)
 		}
-		l.head++
+		l.head += 2 // skip char and second '
 
 		l.tokens = append(l.tokens, Token{
 			Type:    TK_CHAR_LITERAL,
