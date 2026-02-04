@@ -42,3 +42,22 @@ func TestVariableDefineStatement(t *testing.T) {
 	}
 
 }
+
+func TestReturnStatement(t *testing.T) {
+	input := `return 5;
+	return 10;
+	return 10.58;`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Equal(t, len(program.Statements), 3, "should have three statements")
+
+	for _, stmt := range program.Statements {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		assert.True(t, ok, "could not cast statement to ReturnStatement")
+		assert.Equal(t, "return", returnStmt.TokenLiteral(), "token literal not equal to 'return'")
+	}
+}

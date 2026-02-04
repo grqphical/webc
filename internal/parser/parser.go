@@ -77,6 +77,8 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword:
 		return p.parseVariableDefineStatement()
+	case lexer.TokenReturn:
+		return p.parseReturnStatement()
 	default:
 		return nil
 	}
@@ -100,6 +102,19 @@ func (p *Parser) parseVariableDefineStatement() ast.Statement {
 		return nil
 	}
 
+	// TODO: add expression parsing support
+	for !p.curTokenIs(lexer.TokenSemicolon) {
+		p.nextToken()
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseReturnStatement() ast.Statement {
+	stmt := &ast.ReturnStatement{Token: p.curToken}
+	p.nextToken() // consume 'return'
+
+	// TODO: skip expressions until we get a semicolon
 	for !p.curTokenIs(lexer.TokenSemicolon) {
 		p.nextToken()
 	}

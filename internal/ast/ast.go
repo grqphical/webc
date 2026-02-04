@@ -57,3 +57,13 @@ func (vds *VariableDefineStatement) statementNode() {}
 func (vds *VariableDefineStatement) TokenLiteral() string {
 	return vds.Token.Literal
 }
+
+type ReturnStatement struct {
+	Token       lexer.Token
+	ReturnValue Expression
+}
+
+func (rs *ReturnStatement) statementNode() {}
+func (rs *ReturnStatement) TokenLiteral() string {
+	return rs.Token.Literal
+}
