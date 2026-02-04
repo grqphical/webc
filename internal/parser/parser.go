@@ -7,6 +7,25 @@ import (
 	"github.com/grqphical/webc/internal/lexer"
 )
 
+// ordering for expression evaluation
+const (
+	_ int = iota
+	LOWEST
+	EQUALS
+	// ==
+	LESSGREATER // > or <
+	SUM
+	// +
+	PRODUCT
+	PREFIX
+	CALL
+)
+
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
 type ParseError struct {
 	message string
 	line    int
@@ -23,6 +42,9 @@ type Parser struct {
 	peekToken lexer.Token
 
 	errors []ParseError
+
+	prefixParseFns map[lexer.TokenType]prefixParseFn
+	infixParseFns  map[lexer.TokenType]infixParseFn
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -35,11 +57,22 @@ func New(l *lexer.Lexer) *Parser {
 	p.nextToken()
 	p.nextToken()
 
+	p.prefixParseFns = make(map[lexer.TokenType]prefixParseFn)
+	p.registerPrefix(lexer.TokenIdent, p.parseIdentifier)
+
 	return p
 }
 
 func (p *Parser) Errors() []ParseError {
 	return p.errors
+}
+
+func (p *Parser) registerPrefix(tokenType lexer.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+func (p *Parser) registerInfix(tokenType lexer.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
 }
 
 func (p *Parser) peekError(t lexer.TokenType) {
@@ -80,7 +113,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case lexer.TokenReturn:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
@@ -119,6 +152,31 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 		p.nextToken()
 	}
 
+	return stmt
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFns[p.curToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExp := prefix()
+
+	return leftExp
+}
+
+func (p *Parser) parseExpressionStatement() ast.Statement {
+	stmt := &ast.ExpressionStatement{Token: p.curToken}
+
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(lexer.TokenSemicolon) {
+		p.nextToken()
+	}
 	return stmt
 }
 

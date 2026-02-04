@@ -61,3 +61,22 @@ func TestReturnStatement(t *testing.T) {
 		assert.Equal(t, "return", returnStmt.TokenLiteral(), "token literal not equal to 'return'")
 	}
 }
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "foobar;"
+
+	l := lexer.New(input)
+	p := parser.New(l)
+
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Equal(t, 1, len(program.Statements), "should have one statement")
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	assert.True(t, ok, "could not cast expression to Identifier")
+	assert.Equal(t, "foobar", ident.Value)
+	assert.Equal(t, "foobar", ident.TokenLiteral())
+}
