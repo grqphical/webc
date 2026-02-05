@@ -314,18 +314,16 @@ func (p *Parser) parseFunction() *ast.Function {
 	function.Statements = make([]ast.Statement, 0)
 
 	// just skip '()' for now, we will deal with arguments later
-	if !p.peekTokenIs(lexer.TokenLParen) {
+	if !p.expectPeek(lexer.TokenLParen) {
 		return nil
 	}
-	p.nextToken()
 
-	if !p.peekTokenIs(lexer.TokenRParen) {
+	if !p.expectPeek(lexer.TokenRParen) {
 		return nil
 	}
-	p.nextToken()
 
 	// skip '{'
-	if !p.peekTokenIs(lexer.TokenLBrace) {
+	if !p.expectPeek(lexer.TokenLBrace) {
 		return nil
 	}
 	p.nextToken()
@@ -360,6 +358,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program.Functions = make([]*ast.Function, 0)
 
 	for p.curToken.Type != lexer.TokenEndOfFile {
+		// functions are form [type] [identifier]()
 		isFunc := p.isTypeKeyword(p.curToken.Type) &&
 			p.peekTokenIs(lexer.TokenIdent) &&
 			p.doublePeekTokenIs(lexer.TokenLParen)

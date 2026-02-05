@@ -290,3 +290,19 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 	}
 
 }
+
+func TestFunctionDeclarations(t *testing.T) {
+	input := `int main(){int x = 5;}`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+
+	assert.Equal(t, 1, len(program.Functions), "didnt get one function declaration")
+	assert.Equal(t, "main", program.Functions[0].Name)
+	assert.Equal(t, 1, len(program.Functions[0].Statements), "did not get one statement")
+
+	_, ok := program.Functions[0].Statements[0].(*ast.VariableDefineStatement)
+	assert.True(t, ok, "cannot cast statement to VariableDefineStatement")
+}
