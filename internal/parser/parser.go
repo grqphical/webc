@@ -167,13 +167,14 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 func (p *Parser) parseVariableDefineStatement() ast.Statement {
-	stmt := &ast.VariableDefineStatement{Token: p.curToken, Type: ast.ValueType(p.curToken.Literal)}
+	t := ast.ValueType(p.curToken.Literal)
+	stmt := &ast.VariableDefineStatement{Token: p.curToken, Type: t}
 
 	if !p.expectPeek(lexer.TokenIdent) {
 		return nil
 	}
 
-	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.SetSymbol(p.curToken.Literal, t)}
 
 	if p.peekTokenIs(lexer.TokenSemicolon) {
 		// just defining the variable to be uninitialized
@@ -312,6 +313,7 @@ func (p *Parser) parseFunction() *ast.Function {
 	name := p.curToken.Literal
 	function := ast.NewFunction(name, ast.ValueType(t))
 	function.Statements = make([]ast.Statement, 0)
+	p.curFunction = function
 
 	// just skip '()' for now, we will deal with arguments later
 	if !p.expectPeek(lexer.TokenLParen) {

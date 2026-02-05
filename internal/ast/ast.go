@@ -65,7 +65,7 @@ type Function struct {
 	Name            string
 	ReturnType      ValueType
 	Statements      []Statement
-	Symbols         map[string]Symbol
+	Symbols         map[string]*Symbol
 	NextSymbolIndex int
 }
 
@@ -74,7 +74,7 @@ func NewFunction(name string, returnType ValueType) *Function {
 		Name:            name,
 		ReturnType:      returnType,
 		Statements:      make([]Statement, 0),
-		Symbols:         make(map[string]Symbol),
+		Symbols:         make(map[string]*Symbol),
 		NextSymbolIndex: 0,
 	}
 }
@@ -109,6 +109,20 @@ func (f *Function) GetVariableCounts() (integerCount, floatCount int) {
 		}
 	}
 	return
+}
+
+func (f *Function) SetSymbol(name string, t ValueType) *Symbol {
+	s := &Symbol{
+		Index: f.NextSymbolIndex,
+		Type:  t,
+	}
+	f.Symbols[name] = s
+	f.NextSymbolIndex++
+	return s
+}
+
+func (f *Function) GetSymbol(name string) *Symbol {
+	return f.Symbols[name]
 }
 
 type Symbol struct {

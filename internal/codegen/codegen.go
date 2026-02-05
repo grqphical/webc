@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -186,7 +187,7 @@ func (m *WASMModule) generateCodeSection() error {
 		}
 
 		// --- Instructions ---
-		for _, stmt := range function.Body.Statements {
+		for _, stmt := range function.Statements {
 			if err := m.generateStatement(stmt, &funcBody); err != nil {
 				return err
 			}
@@ -200,6 +201,44 @@ func (m *WASMModule) generateCodeSection() error {
 
 	m.writeSection(SecCode, codePayload.Bytes())
 	return nil
+}
+
+func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.Buffer) error {
+	switch e := exp.(type) {
+	case *ast.IntegerLiteral:
+		funcBody.WriteByte(OpCodeI32Const)
+		funcBody.Write(EncodeSLEB128(int32(e.Value)))
+		return nil
+	case *ast.FloatLiteral:
+		funcBody.WriteByte(OpCodeF32Const)
+		funcBody.Write(EncodeF32(float32(e.Value)))
+		return nil
+	default:
+		return errors.New("unsupported expression")
+	}
+}
+
+func (m *WASMModule) generateVariableDefinition(stmt *ast.VariableDefineStatement, funcBody *bytes.Buffer) error {
+	if stmt.Value == nil {
+		// variable is jsut defined, has not been set yet
+		return nil
+	}
+
+	m.generateExpressionCode(stmt.Value, funcBody)
+	index := stmt.Name.Symbol.Index
+	funcBody.WriteByte(OpCodeLocalSet)
+	funcBody.Write(EncodeULEB128(uint32(index)))
+
+	return nil
+}
+
+func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffer) error {
+	switch s := stmt.(type) {
+	case *ast.VariableDefineStatement:
+		return m.generateVariableDefinition(s, funcBody)
+	default:
+		return errors.New("unknown statement type")
+	}
 }
 
 func (m *WASMModule) Generate() error {

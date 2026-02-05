@@ -42,20 +42,17 @@ func main() {
 	}
 
 	lexer := lexer.New(string(sourceCode))
-	tokens := lexer.Parse()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	//fmt.Printf("tokens: %+v\n", tokens)
 
-	parser := parser.New(tokens)
-	program, err := parser.Parse()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+	parser := parser.New(lexer)
+	program := parser.ParseProgram()
+
+	if len(parser.Errors()) != 0 {
+		fmt.Println("Errors encountered while compiling:")
+		for _, err := range parser.Errors() {
+			fmt.Println(err.Error())
+		}
 		os.Exit(1)
 	}
-	//fmt.Printf("program: %+v\n", program)
 
 	module := codegen.NewModule(program)
 	err = module.Generate()
