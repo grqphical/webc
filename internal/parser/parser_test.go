@@ -252,3 +252,42 @@ func TestFloatInfixOperators(t *testing.T) {
 		assert.Equal(t, tt.rightValue, rightValue.Value)
 	}
 }
+
+func TestOperatorPrecedenceParsing(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			"-a * b",
+			"((-a) * b)",
+		},
+		{
+			"a + b + c",
+			"((a + b) + c)",
+		}, {
+			"a + b - c",
+			"((a + b) - c)",
+		}, {
+			"a * b * c",
+			"((a * b) * c)",
+		}, {
+			"a * b / c",
+			"((a * b) / c)",
+		}, {
+			"a + b / c",
+			"(a + (b / c))",
+		},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		assert.NotNil(t, program)
+
+		actual := program.String()
+		assert.Equal(t, tt.expected, actual)
+	}
+
+}
