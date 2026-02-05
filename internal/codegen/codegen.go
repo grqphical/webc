@@ -213,9 +213,49 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		funcBody.WriteByte(OpCodeF32Const)
 		funcBody.Write(EncodeF32(float32(e.Value)))
 		return nil
+	case *ast.Identifier:
+		index := e.Symbol.Index
+		funcBody.WriteByte(OpCodeLocalGet)
+		funcBody.Write(EncodeULEB128(uint32(index)))
+		return nil
+	case *ast.PrefixExpression:
+		switch e.Operator {
+		case "-":
+			if e.Right.ValueType() == ast.ValueTypeInt || e.Right.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32Const)
+				funcBody.Write(EncodeSLEB128(0))
+				m.generateExpressionCode(e.Right, funcBody)
+				funcBody.WriteByte(OpCodeI32Sub)
+			} else if e.Right.ValueType() == ast.ValueTypeFloat {
+				m.generateExpressionCode(e.Right, funcBody)
+				funcBody.WriteByte(OpCodeF32Neg)
+			}
+		default:
+			return errors.ErrUnsupported
+		}
+
+	case *ast.InfixExpression:
+		if e.Left.ValueType() != e.Right.ValueType() {
+			return errors.New("currently operations between different types are not supported")
+		}
+
+		m.generateExpressionCode(e.Left, funcBody)
+		m.generateExpressionCode(e.Right, funcBody)
+		switch e.Operator {
+		case "+":
+			if e.Left.ValueType() == ast.ValueTypeInt {
+				funcBody.WriteByte(OpCodeI32Add)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Add)
+			}
+		}
+
+		return nil
 	default:
 		return errors.New("unsupported expression")
 	}
+
+	return nil
 }
 
 func (m *WASMModule) generateVariableDefinition(stmt *ast.VariableDefineStatement, funcBody *bytes.Buffer) error {
@@ -232,10 +272,18 @@ func (m *WASMModule) generateVariableDefinition(stmt *ast.VariableDefineStatemen
 	return nil
 }
 
+func (m *WASMModule) generateReturnStatement(stmt *ast.ReturnStatement, funcBody *bytes.Buffer) error {
+	m.generateExpressionCode(stmt.ReturnValue, funcBody)
+	funcBody.WriteByte(OpCodeReturn)
+	return nil
+}
+
 func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffer) error {
 	switch s := stmt.(type) {
 	case *ast.VariableDefineStatement:
 		return m.generateVariableDefinition(s, funcBody)
+	case *ast.ReturnStatement:
+		return m.generateReturnStatement(s, funcBody)
 	default:
 		return errors.New("unknown statement type")
 	}

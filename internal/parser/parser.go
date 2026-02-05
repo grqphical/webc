@@ -210,7 +210,7 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.GetSymbol(p.curToken.Literal)}
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
