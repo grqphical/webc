@@ -4,9 +4,9 @@ Thank you for considering contributing to webc! The contents of this document ar
 ## Prerequisites
 You need to have Go version `1.25` or later installed (I have not tested with previous version, let me know if previous versions do work)
 
+### Recommendations
 I **HIGHLY RECOMMEND** having GNU `make` installed; there should be versions for most major Operating Systems
 
-### Recommendations
 I also recommend using [The WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) to debug WASM binaries, not necessary but will save you countless hours
 
 ## Code Style
@@ -31,6 +31,8 @@ For any files in `templates/` (HTML and JS files), use `prettier` to format them
 `internal/parser` is code for the parser
 
 `internal/codegen` is code for the WASM code generator
+
+`internal/ast` contains structs that represent nodes in the Abstract Syntax Tree
 
 `templates` contains templates for the HTML/JS wrapper code that gets created with the compiler
 
