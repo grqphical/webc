@@ -248,6 +248,24 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Add)
 			}
+		case "-":
+			if e.Left.ValueType() == ast.ValueTypeInt {
+				funcBody.WriteByte(OpCodeI32Sub)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Sub)
+			}
+		case "*":
+			if e.Left.ValueType() == ast.ValueTypeInt {
+				funcBody.WriteByte(OpCodeI32Mul)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Mul)
+			}
+		case "/":
+			if e.Left.ValueType() == ast.ValueTypeInt {
+				funcBody.WriteByte(OpCodeI32SignedDivision)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Division)
+			}
 		}
 
 		return nil
