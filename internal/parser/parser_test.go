@@ -214,3 +214,41 @@ func TestIntegerInfixOperators(t *testing.T) {
 		assert.Equal(t, tt.rightValue, rightValue.Value)
 	}
 }
+
+func TestFloatInfixOperators(t *testing.T) {
+	infixTests := []struct {
+		input      string
+		leftValue  float64
+		operator   string
+		rightValue float64
+	}{
+		{"8.1 + 2.1;", 8.1, "+", 2.1},
+		{"8.1 - 2.1;", 8.1, "-", 2.1},
+		{"8.1 * 2.1;", 8.1, "*", 2.1},
+		{"8.1 / 2.1;", 8.1, "/", 2.1},
+	}
+
+	for _, tt := range infixTests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		assert.NotNil(t, program)
+
+		assert.Equal(t, 1, len(program.Statements), "should have one statement")
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+		exp, ok := stmt.Expression.(*ast.InfixExpression)
+		assert.True(t, ok, "could not cast expression to InfixExpression")
+		assert.Equal(t, tt.operator, exp.Operator)
+
+		leftValue, ok := exp.Left.(*ast.FloatLiteral)
+		assert.True(t, ok, "could not cast value to IntegerLiteral")
+		assert.Equal(t, tt.leftValue, leftValue.Value)
+
+		rightValue, ok := exp.Right.(*ast.FloatLiteral)
+		assert.True(t, ok, "could not cast value to IntegerLiteral")
+		assert.Equal(t, tt.rightValue, rightValue.Value)
+	}
+}
