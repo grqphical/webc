@@ -44,13 +44,16 @@ func (pe ParseError) Error() string {
 type Parser struct {
 	l *lexer.Lexer
 
-	curToken  lexer.Token
-	peekToken lexer.Token
+	curToken   lexer.Token
+	peekToken  lexer.Token
+	peekToken2 lexer.Token
 
 	errors []ParseError
 
 	prefixParseFns map[lexer.TokenType]prefixParseFn
 	infixParseFns  map[lexer.TokenType]infixParseFn
+
+	curFunction *ast.Function
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -59,7 +62,8 @@ func New(l *lexer.Lexer) *Parser {
 		errors: make([]ParseError, 0),
 	}
 
-	// read the first two characters so that curToken and peekToken are set
+	// read the first three characters so that curToken, peekToken and peekToken2 are set
+	p.nextToken()
 	p.nextToken()
 	p.nextToken()
 
@@ -124,7 +128,8 @@ func (p *Parser) currentPrecedence() int {
 
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
-	p.peekToken = p.l.NextToken()
+	p.peekToken = p.peekToken2
+	p.peekToken2 = p.l.NextToken()
 }
 
 func (p *Parser) curTokenIs(t lexer.TokenType) bool {
@@ -133,6 +138,11 @@ func (p *Parser) curTokenIs(t lexer.TokenType) bool {
 
 func (p *Parser) peekTokenIs(t lexer.TokenType) bool {
 	return p.peekToken.Type == t
+}
+
+// peeks ahead by two
+func (p *Parser) doublePeekTokenIs(t lexer.TokenType) bool {
+	return p.peekToken2.Type == t
 }
 
 func (p *Parser) expectPeek(t lexer.TokenType) bool {
@@ -165,18 +175,21 @@ func (p *Parser) parseVariableDefineStatement() ast.Statement {
 
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
-	if p.expectPeek(lexer.TokenSemicolon) {
+	if p.peekTokenIs(lexer.TokenSemicolon) {
 		// just defining the variable to be uninitialized
+		p.nextToken()
 		return stmt
 	}
 
 	if !p.expectPeek(lexer.TokenEqual) {
 		return nil
 	}
+	p.nextToken()
 
-	// TODO: add expression parsing support
-	for !p.curTokenIs(lexer.TokenSemicolon) {
-		p.nextToken()
+	stmt.Value = p.parseExpression(PrecendenceLowest)
+
+	if !p.expectPeek(lexer.TokenSemicolon) {
+		return nil
 	}
 
 	return stmt
@@ -186,9 +199,10 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken() // consume 'return'
 
-	// TODO: skip expressions until we get a semicolon
-	for !p.curTokenIs(lexer.TokenSemicolon) {
-		p.nextToken()
+	stmt.ReturnValue = p.parseExpression(PrecendenceLowest)
+
+	if !p.expectPeek(lexer.TokenSemicolon) {
+		return nil
 	}
 
 	return stmt
@@ -253,7 +267,7 @@ func (p *Parser) parseFloatLiteral() ast.Expression {
 
 	value, err := strconv.ParseFloat(p.curToken.Literal, 64)
 	if err != nil {
-		msg := fmt.Sprintf("could not parse %q as an integer", p.curToken.Literal)
+		msg := fmt.Sprintf("could not parse %q as a float", p.curToken.Literal)
 		p.errors = append(p.errors, ParseError{
 			message: msg,
 			line:    p.curToken.Line,
@@ -292,15 +306,76 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expression
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
-	program := &ast.Program{}
-	program.Statements = make([]ast.Statement, 0)
+func (p *Parser) parseFunction() *ast.Function {
+	t := p.curToken.Literal
+	p.nextToken()
+	name := p.curToken.Literal
+	function := ast.NewFunction(name, ast.ValueType(t))
+	function.Statements = make([]ast.Statement, 0)
 
-	for p.curToken.Type != lexer.TokenEndOfFile {
+	// just skip '()' for now, we will deal with arguments later
+	if !p.peekTokenIs(lexer.TokenLParen) {
+		return nil
+	}
+	p.nextToken()
+
+	if !p.peekTokenIs(lexer.TokenRParen) {
+		return nil
+	}
+	p.nextToken()
+
+	// skip '{'
+	if !p.peekTokenIs(lexer.TokenLBrace) {
+		return nil
+	}
+	p.nextToken()
+
+	for p.curToken.Type != lexer.TokenRBrace {
+		if p.curToken.Type == lexer.TokenEndOfFile {
+			p.errors = append(p.errors, ParseError{
+				message: "expected }, got EOF instead",
+				line:    p.curToken.Line,
+			})
+			return nil
+		}
+
 		stmt := p.parseStatement()
 		if stmt != nil {
-			program.Statements = append(program.Statements, stmt)
+			function.Statements = append(function.Statements, stmt)
 		}
+		p.nextToken()
+	}
+
+	return function
+}
+
+func (p *Parser) isTypeKeyword(t lexer.TokenType) bool {
+	return t == lexer.TokenIntKeyword ||
+		t == lexer.TokenFloatKeyword ||
+		t == lexer.TokenCharKeyword
+}
+
+func (p *Parser) ParseProgram() *ast.Program {
+	program := &ast.Program{}
+	program.Functions = make([]*ast.Function, 0)
+
+	for p.curToken.Type != lexer.TokenEndOfFile {
+		isFunc := p.isTypeKeyword(p.curToken.Type) &&
+			p.peekTokenIs(lexer.TokenIdent) &&
+			p.doublePeekTokenIs(lexer.TokenLParen)
+
+		if isFunc {
+			function := p.parseFunction()
+			if function != nil {
+				program.Functions = append(program.Functions, function)
+			}
+		} else {
+			stmt := p.parseStatement()
+			if stmt != nil {
+				program.Statements = append(program.Statements, stmt)
+			}
+		}
+
 		p.nextToken()
 	}
 

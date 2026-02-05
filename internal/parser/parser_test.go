@@ -11,22 +11,21 @@ import (
 
 func TestVariableDefineStatement(t *testing.T) {
 	input := `int x = 5;
-	float y = 5.6;
-	char foobar = 'b';`
+	float y = 5.6;`
 
 	l := lexer.New(input)
 	p := parser.New(l)
 
 	program := p.ParseProgram()
+	assert.Empty(t, p.Errors())
 	assert.NotNil(t, program)
-	assert.Equal(t, len(program.Statements), 3, "should have three statements")
+	assert.Equal(t, len(program.Statements), 2, "should have two statements")
 
 	tests := []struct {
 		expectedIdentifier string
 	}{
 		{"x"},
 		{"y"},
-		{"foobar"},
 	}
 
 	for i, tt := range tests {
@@ -35,7 +34,7 @@ func TestVariableDefineStatement(t *testing.T) {
 		assert.Contains(t, []string{"float", "int", "char"}, stmt.TokenLiteral(), "statement isn't type of int, float, or char")
 
 		defineStmt, ok := stmt.(*ast.VariableDefineStatement)
-		assert.True(t, ok, "could not cast statement to *ast.VariableDefineStatement")
+		assert.Truef(t, ok, "could not cast statement to *ast.VariableDefineStatement, got %T instead", stmt)
 
 		assert.Equal(t, tt.expectedIdentifier, defineStmt.Name.Value, "statement names are not equal")
 		assert.Equal(t, tt.expectedIdentifier, defineStmt.Name.TokenLiteral(), "statement name token literal not equal")

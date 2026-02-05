@@ -3,13 +3,11 @@ package codegen
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
 	"os"
-	"strconv"
 
-	"github.com/grqphical/webc/internal/parser"
+	"github.com/grqphical/webc/internal/ast"
 )
 
 const magicNumberAndVersion = "\x00asm\x01\x00\x00\x00"
@@ -85,10 +83,10 @@ func EncodeSLEB128(n int32) []byte {
 
 type WASMModule struct {
 	buffer  bytes.Buffer
-	program parser.Program
+	program *ast.Program
 }
 
-func NewModule(program parser.Program) *WASMModule {
+func NewModule(program *ast.Program) *WASMModule {
 	m := &WASMModule{
 		program: program,
 	}
@@ -111,10 +109,10 @@ func (m *WASMModule) generateTypeSection() {
 		typePayload.WriteByte(0x60)         // function type
 		typePayload.Write(EncodeULEB128(0)) // Param count: 0
 		typePayload.Write(EncodeULEB128(1)) // Result count: 1
-		switch f.Type {
-		case parser.TypeInt, parser.TypeChar:
+		switch f.ReturnType {
+		case ast.ValueTypeInt, ast.ValueTypeChar:
 			typePayload.WriteByte(0x7F)
-		case parser.TypeFloat:
+		case ast.ValueTypeFloat:
 			typePayload.WriteByte(0x7D)
 		}
 	}
@@ -202,106 +200,6 @@ func (m *WASMModule) generateCodeSection() error {
 
 	m.writeSection(SecCode, codePayload.Bytes())
 	return nil
-}
-
-func (m *WASMModule) generateStatement(stmt parser.Node, body *bytes.Buffer) error {
-	switch s := stmt.(type) {
-	case parser.ReturnStmt:
-		m.generateExpressionCode(s.Value, body)
-		body.WriteByte(OpCodeReturn)
-		return nil
-	case parser.VariableDefineStmt:
-		m.generateExpressionCode(s.Value, body)
-		body.WriteByte(OpCodeLocalSet)
-		body.Write(EncodeULEB128(uint32(s.Symbol.Index)))
-		return nil
-	case parser.VariableUpdateStmt:
-		m.generateExpressionCode(s.Value, body)
-		body.WriteByte(OpCodeLocalSet)
-		body.Write(EncodeULEB128(uint32(s.Index)))
-		return nil
-	default:
-		return errors.New("unsupported statement type")
-	}
-}
-
-func (m *WASMModule) generateExpressionCode(value parser.Node, body *bytes.Buffer) {
-	switch t := value.(type) {
-
-	case parser.Constant:
-		if t.Type == parser.TypeInt {
-			body.WriteByte(OpCodeI32Const)
-			intValue, _ := strconv.Atoi(t.Value)
-			body.Write(EncodeSLEB128(int32(intValue)))
-		} else if t.Type == parser.TypeFloat {
-			body.WriteByte(OpCodeF32Const)
-			floatValue, _ := strconv.ParseFloat(t.Value, 32)
-			body.Write(EncodeF32(float32(floatValue)))
-		} else if t.Type == parser.TypeChar {
-			body.WriteByte(OpCodeI32Const)
-			intValue := int32(t.Value[0])
-			body.Write(EncodeSLEB128(intValue))
-		}
-
-	case parser.VariableAccess:
-		body.WriteByte(OpCodeLocalGet)
-		body.Write(EncodeULEB128(uint32(t.Index)))
-
-	case parser.UnaryExpression:
-		// Check the type of the value being negated
-		if t.Value.GetType() == parser.TypeFloat {
-			m.generateExpressionCode(t.Value, body)
-			// f32 has a direct 'neg' opcode
-			body.WriteByte(OpCodeF32Neg) // f32.neg
-		} else {
-			// i32 doesn't have neg, so we do (0 - x)
-			body.WriteByte(OpCodeI32Const)
-			body.Write(EncodeSLEB128(0))
-			m.generateExpressionCode(t.Value, body) // Move this here for i32
-			body.WriteByte(OpCodeI32Sub)
-		}
-
-	case parser.BinaryExpression:
-		m.generateExpressionCode(t.A, body)
-		m.generateExpressionCode(t.B, body)
-
-		// Branching based on the type of the expression
-		isFloat := t.A.GetType() == parser.TypeFloat || t.B.GetType() == parser.TypeFloat
-
-		switch t.Operation {
-		case "+":
-			if isFloat {
-				body.WriteByte(OpCodeF32Add)
-			} else {
-				body.WriteByte(OpCodeI32Add)
-			}
-		case "-":
-			if isFloat {
-				body.WriteByte(OpCodeF32Sub)
-			} else {
-				body.WriteByte(OpCodeI32Sub)
-			}
-		case "*":
-			if isFloat {
-				body.WriteByte(OpCodeF32Mul)
-			} else {
-				body.WriteByte(OpCodeI32Mul)
-			}
-		case "/":
-			if isFloat {
-				body.WriteByte(OpCodeF32Division)
-			} else {
-				body.WriteByte(OpCodeI32SignedDivision)
-			}
-		}
-	}
-
-	if value.GetType() == parser.TypeChar {
-		// make sure characters wrap around after 255
-		body.WriteByte(OpCodeI32Const)
-		body.Write(EncodeSLEB128(255))
-		body.WriteByte(OpCodeI32And)
-	}
 }
 
 func (m *WASMModule) Generate() error {

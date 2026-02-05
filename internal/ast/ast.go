@@ -12,11 +12,13 @@ const (
 	ValueTypeInt   ValueType = "int"
 	ValueTypeFloat ValueType = "float"
 	ValueTypeChar  ValueType = "char"
+	ValueTypeVoid  ValueType = "void"
 )
 
 type Node interface {
 	TokenLiteral() string
 	String() string
+	ValueType() ValueType
 }
 
 type Statement interface {
@@ -30,12 +32,15 @@ type Expression interface {
 }
 
 type Program struct {
+	Functions []*Function
+
+	// global statements
 	Statements []Statement
 }
 
 func (p *Program) TokenLiteral() string {
-	if len(p.Statements) > 0 {
-		return p.Statements[0].TokenLiteral()
+	if len(p.Functions) > 0 {
+		return p.Functions[0].TokenLiteral()
 	} else {
 		return ""
 	}
@@ -43,15 +48,75 @@ func (p *Program) TokenLiteral() string {
 
 func (p *Program) String() string {
 	var out bytes.Buffer
-	for _, s := range p.Statements {
+	for _, f := range p.Functions {
+		out.WriteString(f.String())
+	}
+	return out.String()
+}
+
+func (p *Program) Type() ValueType {
+	return ValueTypeVoid
+}
+
+type Function struct {
+	Name            string
+	ReturnType      ValueType
+	Statements      []Statement
+	Symbols         map[string]Symbol
+	NextSymbolIndex int
+}
+
+func NewFunction(name string, returnType ValueType) *Function {
+	return &Function{
+		Name:            name,
+		ReturnType:      returnType,
+		Statements:      make([]Statement, 0),
+		Symbols:         make(map[string]Symbol),
+		NextSymbolIndex: 0,
+	}
+}
+
+func (f *Function) TokenLiteral() string {
+	if len(f.Statements) > 0 {
+		return f.Statements[0].TokenLiteral()
+	} else {
+		return ""
+	}
+}
+
+func (f *Function) String() string {
+	var out bytes.Buffer
+	for _, s := range f.Statements {
 		out.WriteString(s.String())
 	}
 	return out.String()
 }
 
+func (f *Function) ValueType() ValueType {
+	return f.ReturnType
+}
+
+func (f *Function) GetVariableCounts() (integerCount, floatCount int) {
+	for _, s := range f.Symbols {
+		switch s.Type {
+		case ValueTypeFloat:
+			floatCount++
+		case ValueTypeInt:
+			integerCount++
+		}
+	}
+	return
+}
+
+type Symbol struct {
+	Index int
+	Type  ValueType
+}
+
 type Identifier struct {
-	Token lexer.Token
-	Value string
+	Token  lexer.Token
+	Value  string
+	Symbol *Symbol
 }
 
 func (i *Identifier) expressionNode() {}
@@ -60,6 +125,9 @@ func (i *Identifier) TokenLiteral() string {
 }
 func (i *Identifier) String() string {
 	return i.Value
+}
+func (i *Identifier) ValueType() ValueType {
+	return i.Symbol.Type
 }
 
 type VariableDefineStatement struct {
@@ -88,6 +156,9 @@ func (vds *VariableDefineStatement) String() string {
 
 	return out.String()
 }
+func (vds *VariableDefineStatement) ValueType() ValueType {
+	return vds.Type
+}
 
 type ReturnStatement struct {
 	Token       lexer.Token
@@ -111,6 +182,9 @@ func (rs *ReturnStatement) String() string {
 
 	return out.String()
 }
+func (rs *ReturnStatement) ValueType() ValueType {
+	return rs.ReturnValue.ValueType()
+}
 
 type ExpressionStatement struct {
 	Token      lexer.Token
@@ -125,6 +199,9 @@ func (es *ExpressionStatement) String() string {
 	}
 	return ""
 }
+func (es *ExpressionStatement) ValueType() ValueType {
+	return es.Expression.ValueType()
+}
 
 type IntegerLiteral struct {
 	Token lexer.Token
@@ -135,6 +212,7 @@ type IntegerLiteral struct {
 func (il *IntegerLiteral) expressionNode()      {}
 func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string       { return il.Token.Literal }
+func (il *IntegerLiteral) ValueType() ValueType { return il.Type }
 
 type FloatLiteral struct {
 	Token lexer.Token
@@ -145,6 +223,7 @@ type FloatLiteral struct {
 func (fl *FloatLiteral) expressionNode()      {}
 func (fl *FloatLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FloatLiteral) String() string       { return fl.Token.Literal }
+func (fl *FloatLiteral) ValueType() ValueType { return fl.Type }
 
 type PrefixExpression struct {
 	Token    lexer.Token
@@ -163,6 +242,9 @@ func (pe *PrefixExpression) String() string {
 	out.WriteString(")")
 
 	return out.String()
+}
+func (pe *PrefixExpression) ValueType() ValueType {
+	return pe.Right.ValueType()
 }
 
 type InfixExpression struct {
@@ -184,4 +266,7 @@ func (ie *InfixExpression) String() string {
 	out.WriteString(")")
 
 	return out.String()
+}
+func (ie *InfixExpression) ValueType() ValueType {
+	return ie.Left.ValueType()
 }
