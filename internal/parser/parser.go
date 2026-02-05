@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/grqphical/webc/internal/ast"
 	"github.com/grqphical/webc/internal/lexer"
@@ -59,6 +60,7 @@ func New(l *lexer.Lexer) *Parser {
 
 	p.prefixParseFns = make(map[lexer.TokenType]prefixParseFn)
 	p.registerPrefix(lexer.TokenIdent, p.parseIdentifier)
+	p.registerPrefix(lexer.TokenIntLiteral, p.parseIntegerLiteral)
 
 	return p
 }
@@ -178,6 +180,23 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 		p.nextToken()
 	}
 	return stmt
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	lit := &ast.IntegerLiteral{Token: p.curToken, Type: ast.ValueTypeInt}
+
+	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as an integer", p.curToken.Literal)
+		p.errors = append(p.errors, ParseError{
+			message: msg,
+			line:    p.curToken.Line,
+		})
+		return nil
+	}
+
+	lit.Value = value
+	return lit
 }
 
 func (p *Parser) ParseProgram() *ast.Program {

@@ -80,3 +80,21 @@ func TestIdentifierExpression(t *testing.T) {
 	assert.Equal(t, "foobar", ident.Value)
 	assert.Equal(t, "foobar", ident.TokenLiteral())
 }
+
+func TestIntegerLiteralExpression(t *testing.T) {
+	input := "12345;"
+
+	l := lexer.New(input)
+	p := parser.New(l)
+
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Equal(t, 1, len(program.Statements), "should have one statement")
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+	literal, ok := stmt.Expression.(*ast.IntegerLiteral)
+	assert.True(t, ok, "could not cast expression to IntegerLiteral")
+	assert.Equal(t, "12345", literal.TokenLiteral())
+}
