@@ -116,3 +116,63 @@ func TestFloatLiteralExpression(t *testing.T) {
 	assert.True(t, ok, "could not cast expression to FloatLiteral")
 	assert.Equal(t, "5.4", literal.TokenLiteral())
 }
+
+func TestIntegerPrefixOperators(t *testing.T) {
+	prefixTests := []struct {
+		input        string
+		operator     string
+		integerValue int64
+	}{
+		{"-5", "-", 5},
+	}
+
+	for _, tt := range prefixTests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		assert.NotNil(t, program)
+
+		assert.Equal(t, 1, len(program.Statements), "should have one statement")
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+		exp, ok := stmt.Expression.(*ast.PrefixExpression)
+		assert.True(t, ok, "could not cast expression to PrefixExpression")
+		assert.Equal(t, tt.operator, exp.Operator)
+
+		value, ok := exp.Right.(*ast.IntegerLiteral)
+		assert.True(t, ok, "could not cast value to IntegerLiteral")
+		assert.Equal(t, tt.integerValue, value.Value)
+	}
+}
+
+func TestFloatPrefixOperators(t *testing.T) {
+	prefixTests := []struct {
+		input      string
+		operator   string
+		floatValue float64
+	}{
+		{"-5.1", "-", 5.1},
+	}
+
+	for _, tt := range prefixTests {
+		l := lexer.New(tt.input)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		assert.NotNil(t, program)
+
+		assert.Equal(t, 1, len(program.Statements), "should have one statement")
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+		exp, ok := stmt.Expression.(*ast.PrefixExpression)
+		assert.True(t, ok, "could not cast expression to PrefixExpression")
+		assert.Equal(t, tt.operator, exp.Operator)
+
+		value, ok := exp.Right.(*ast.FloatLiteral)
+		assert.True(t, ok, "could not cast value to FloatLiteral")
+		assert.Equal(t, tt.floatValue, value.Value)
+	}
+}

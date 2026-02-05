@@ -11,15 +11,13 @@ import (
 // ordering for expression evaluation
 const (
 	_ int = iota
-	LOWEST
-	EQUALS
-	// ==
-	LESSGREATER // > or <
-	SUM
-	// +
-	PRODUCT
-	PREFIX
-	CALL
+	PrecendenceLowest
+	PrecedenceEquals
+	PrecedenceLessGreater
+	PrecedenceSum
+	PrecedenceProduct
+	PrecedencePrefix
+	PrecedenceCall
 )
 
 type (
@@ -62,12 +60,21 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.TokenIdent, p.parseIdentifier)
 	p.registerPrefix(lexer.TokenIntLiteral, p.parseIntegerLiteral)
 	p.registerPrefix(lexer.TokenFloatLiteral, p.parseFloatLiteral)
+	p.registerPrefix(lexer.TokenDash, p.parsePrefixExpression)
 
 	return p
 }
 
 func (p *Parser) Errors() []ParseError {
 	return p.errors
+}
+
+func (p *Parser) noPrefixParseFnError(t lexer.TokenType, line int) {
+	msg := fmt.Sprintf("no prefix parse function for %s found", t)
+	p.errors = append(p.errors, ParseError{
+		message: msg,
+		line:    line,
+	})
 }
 
 func (p *Parser) registerPrefix(tokenType lexer.TokenType, fn prefixParseFn) {
@@ -165,6 +172,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
+		p.noPrefixParseFnError(p.curToken.Type, p.curToken.Line)
 		return nil
 	}
 	leftExp := prefix()
@@ -175,7 +183,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 func (p *Parser) parseExpressionStatement() ast.Statement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
-	stmt.Expression = p.parseExpression(LOWEST)
+	stmt.Expression = p.parseExpression(PrecendenceLowest)
 
 	if p.peekTokenIs(lexer.TokenSemicolon) {
 		p.nextToken()
@@ -215,6 +223,19 @@ func (p *Parser) parseFloatLiteral() ast.Expression {
 
 	lit.Value = value
 	return lit
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+	}
+
+	p.nextToken()
+
+	expression.Right = p.parseExpression(PrecedencePrefix)
+
+	return expression
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
