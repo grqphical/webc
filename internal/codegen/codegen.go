@@ -82,6 +82,21 @@ func EncodeSLEB128(n int32) []byte {
 	return res
 }
 
+func checkCompatibleTypes(left, right ast.ValueType) bool {
+	if left == right {
+		return true
+	}
+
+	switch left {
+	case ast.ValueTypeInt:
+		return right == ast.ValueTypeChar
+	case ast.ValueTypeChar:
+		return right == ast.ValueTypeInt
+	default:
+		return false
+	}
+}
+
 type WASMModule struct {
 	buffer  bytes.Buffer
 	program *ast.Program
@@ -213,6 +228,10 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		funcBody.WriteByte(OpCodeF32Const)
 		funcBody.Write(EncodeF32(float32(e.Value)))
 		return nil
+	case *ast.CharLiteral:
+		funcBody.WriteByte(OpCodeI32Const)
+		funcBody.Write(EncodeSLEB128(int32(e.Value)))
+		return nil
 	case *ast.Identifier:
 		index := e.Symbol.Index
 		funcBody.WriteByte(OpCodeLocalGet)
@@ -235,37 +254,44 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		}
 
 	case *ast.InfixExpression:
-		if e.Left.ValueType() != e.Right.ValueType() {
-			return errors.New("currently operations between different types are not supported")
+		if !checkCompatibleTypes(e.Left.ValueType(), e.Right.ValueType()) {
+			return errors.New("incompatible types for infix operation`")
 		}
 
 		m.generateExpressionCode(e.Left, funcBody)
 		m.generateExpressionCode(e.Right, funcBody)
 		switch e.Operator {
 		case "+":
-			if e.Left.ValueType() == ast.ValueTypeInt {
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32Add)
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Add)
 			}
 		case "-":
-			if e.Left.ValueType() == ast.ValueTypeInt {
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32Sub)
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Sub)
 			}
 		case "*":
-			if e.Left.ValueType() == ast.ValueTypeInt {
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32Mul)
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Mul)
 			}
 		case "/":
-			if e.Left.ValueType() == ast.ValueTypeInt {
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32SignedDivision)
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Division)
 			}
+		}
+
+		if e.Left.ValueType() == ast.ValueTypeChar {
+			// make sure characters wrap around after 255
+			funcBody.WriteByte(OpCodeI32Const)
+			funcBody.Write(EncodeSLEB128(255))
+			funcBody.WriteByte(OpCodeI32And)
 		}
 
 		return nil

@@ -106,6 +106,8 @@ func (f *Function) GetVariableCounts() (integerCount, floatCount int) {
 			floatCount++
 		case ValueTypeInt:
 			integerCount++
+		case ValueTypeChar:
+			integerCount++
 		}
 	}
 	return
