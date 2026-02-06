@@ -1,7 +1,6 @@
 package parser_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/grqphical/webc/internal/ast"
@@ -339,9 +338,5 @@ func TestVariableUpdate(t *testing.T) {
 	assert.NotNil(t, program)
 
 	assert.Equal(t, 2, len(program.Statements), "expected two statements")
-
-	for _, s := range program.Statements {
-		fmt.Printf("statement: %+v\n", s)
-	}
 
 }

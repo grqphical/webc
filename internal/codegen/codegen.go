@@ -322,9 +322,57 @@ func (m *WASMModule) generateReturnStatement(stmt *ast.ReturnStatement, funcBody
 }
 
 func (m *WASMModule) generateVariableUpdate(stmt *ast.VariableUpdateStatement, funcBody *bytes.Buffer) error {
-	m.generateExpressionCode(stmt.NewValue, funcBody)
-	funcBody.WriteByte(OpCodeLocalSet)
-	funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	switch stmt.Operation {
+	case "=":
+		m.generateExpressionCode(stmt.NewValue, funcBody)
+		funcBody.WriteByte(OpCodeLocalSet)
+		funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	case "+=":
+		exp := &ast.InfixExpression{
+			Token:    stmt.Token,
+			Left:     stmt.Name,
+			Operator: "+",
+			Right:    stmt.NewValue,
+		}
+
+		m.generateExpressionCode(exp, funcBody)
+		funcBody.WriteByte(OpCodeLocalSet)
+		funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	case "-=":
+		exp := &ast.InfixExpression{
+			Token:    stmt.Token,
+			Left:     stmt.Name,
+			Operator: "-",
+			Right:    stmt.NewValue,
+		}
+
+		m.generateExpressionCode(exp, funcBody)
+		funcBody.WriteByte(OpCodeLocalSet)
+		funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	case "*=":
+		exp := &ast.InfixExpression{
+			Token:    stmt.Token,
+			Left:     stmt.Name,
+			Operator: "*",
+			Right:    stmt.NewValue,
+		}
+
+		m.generateExpressionCode(exp, funcBody)
+		funcBody.WriteByte(OpCodeLocalSet)
+		funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	case "/=":
+		exp := &ast.InfixExpression{
+			Token:    stmt.Token,
+			Left:     stmt.Name,
+			Operator: "/",
+			Right:    stmt.NewValue,
+		}
+
+		m.generateExpressionCode(exp, funcBody)
+		funcBody.WriteByte(OpCodeLocalSet)
+		funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	}
+
 	return nil
 }
 

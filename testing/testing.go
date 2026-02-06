@@ -2,18 +2,20 @@ package testing
 
 import (
 	"context"
+	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 )
 
 // Reads a WASM binary, calls a function from it and check it's return value against the provided expected output.
 // Under the hood, it uses the testify/assert library to assert the equality check
 //
 // Should only be used in a testing environment (ie in a *_test.go file, ran under `go test`)
-func AssertWASMBinary(t *testing.T, binaryFile string, functionName string, expectedOutput any) {
+func AssertWASMBinary(t *testing.T, binaryFile string, functionName string, expectedOutput any, expectedOutputType string) {
 	ctx := context.Background()
 	runtime := wazero.NewRuntime(ctx)
 	defer runtime.Close(ctx)
@@ -39,12 +41,27 @@ func AssertWASMBinary(t *testing.T, binaryFile string, functionName string, expe
 		t.Fatalf("failed to call main: %v", err)
 	}
 
-	var output any
+	var output uint64
 	if len(results) == 1 {
 		output = results[0]
-	} else {
-		output = results
 	}
 
-	assert.EqualValues(t, expectedOutput, output)
+	switch expectedOutputType {
+	case "i32":
+		o := api.DecodeI32(output)
+		assert.EqualValues(t, expectedOutput, o)
+	case "f32":
+		o := api.DecodeF32(output)
+		assert.EqualValues(t, expectedOutput, o)
+	}
+
+}
+
+func init() {
+	if _, err := os.Stat("./temp/"); err != nil {
+		err = os.Mkdir("temp", 0700)
+		if err != nil {
+			log.Fatal("could not create temp directory")
+		}
+	}
 }
