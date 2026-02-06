@@ -13,7 +13,7 @@ import (
 	"github.com/grqphical/webc/internal/parser"
 )
 
-const version string = "v0.1.0-beta"
+const version string = "v0.1.0-alpha"
 
 //go:embed templates/*
 var templateFS embed.FS
