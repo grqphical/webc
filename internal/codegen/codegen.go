@@ -21,6 +21,11 @@ const (
 )
 
 const (
+	LocalTypeI32 byte = 0x7F
+	LocalTypeF32 byte = 0x7D
+)
+
+const (
 	OpCodeEnd    byte = 0x0B
 	OpCodeReturn byte = 0x0F
 
@@ -182,23 +187,17 @@ func (m *WASMModule) generateCodeSection() error {
 	for _, function := range m.program.Functions {
 		funcBody := bytes.Buffer{}
 
-		intCount, floatCount := function.GetVariableCounts()
-		numGroups := uint32(0)
-		if intCount > 0 {
-			numGroups++
-		}
-		if floatCount > 0 {
-			numGroups++
-		}
+		funcBody.Write(EncodeULEB128(uint32(len(function.Symbols))))
 
-		funcBody.Write(EncodeULEB128(numGroups))
-		if intCount > 0 {
-			funcBody.Write(EncodeULEB128(uint32(intCount)))
-			funcBody.WriteByte(0x7F) // i32
-		}
-		if floatCount > 0 {
-			funcBody.Write(EncodeULEB128(uint32(floatCount)))
-			funcBody.WriteByte(0x7D) // f32
+		for _, sym := range function.Symbols {
+			funcBody.Write(EncodeULEB128(1))
+
+			switch sym.Type {
+			case ast.ValueTypeInt, ast.ValueTypeChar:
+				funcBody.WriteByte(LocalTypeI32)
+			case ast.ValueTypeFloat:
+				funcBody.WriteByte(LocalTypeF32)
+			}
 		}
 
 		// --- Instructions ---
