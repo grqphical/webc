@@ -162,11 +162,42 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword:
 		return p.parseVariableDefineStatement()
+	case lexer.TokenIdent:
+		return p.parseVariableUpdateStatement()
 	case lexer.TokenReturn:
 		return p.parseReturnStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
+}
+
+func (p *Parser) parseVariableUpdateStatement() ast.Statement {
+	if !p.peekTokenIs(lexer.TokenEqual) && !p.peekTokenIs(lexer.TokenPlusEqual) && !p.peekTokenIs(lexer.TokenMinusEqual) && !p.peekTokenIs(lexer.TokenTimesEqual) && !p.peekTokenIs(lexer.TokenDivideEqual) {
+		return p.parseExpressionStatement()
+	}
+
+	name := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	symbol := p.curFunction.GetSymbol(p.curToken.Literal)
+	if symbol == nil {
+		p.errors = append(p.errors, ParseError{
+			message: fmt.Sprintf("undeclared variable %s", p.curToken.Literal),
+			line:    p.curToken.Line,
+		})
+		return nil
+	}
+
+	stmt := &ast.VariableUpdateStatement{Name: name, Token: p.curToken}
+
+	stmt.Operation = p.curToken.Literal
+	p.nextToken()
+
+	stmt.NewValue = p.parseExpression(PrecendenceLowest)
+
+	if !p.expectPeek(lexer.TokenSemicolon) {
+		return nil
+	}
+
+	return stmt
 }
 
 func (p *Parser) parseVariableDefineStatement() ast.Statement {

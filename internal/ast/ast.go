@@ -179,6 +179,32 @@ func (vds *VariableDefineStatement) ValueType() ValueType {
 	return vds.Type
 }
 
+type VariableUpdateStatement struct {
+	Name      *Identifier
+	Token     lexer.Token
+	NewValue  Expression
+	Operation string
+}
+
+func (vus *VariableUpdateStatement) statementNode() {}
+func (vus *VariableUpdateStatement) TokenLiteral() string {
+	return vus.Token.Literal
+}
+func (vus *VariableUpdateStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(vus.Name.String())
+	out.WriteString(" = ")
+	out.WriteString(vus.NewValue.String())
+
+	out.WriteString(";")
+
+	return out.String()
+}
+func (vus *VariableUpdateStatement) ValueType() ValueType {
+	return vus.Name.Symbol.Type
+}
+
 type ReturnStatement struct {
 	Token       lexer.Token
 	ReturnValue Expression

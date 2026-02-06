@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/grqphical/webc/internal/ast"
@@ -78,7 +79,7 @@ func TestIdentifierExpression(t *testing.T) {
 	assert.True(t, ok, "could not cast statement to ExpressionStatement")
 
 	ident, ok := stmt.Expression.(*ast.Identifier)
-	assert.True(t, ok, "could not cast expression to Identifier")
+	assert.Truef(t, ok, "could not cast expression to Identifier got %T instead", stmt.Expression)
 	assert.Equal(t, "foobar", ident.Value)
 	assert.Equal(t, "foobar", ident.TokenLiteral())
 }
@@ -326,4 +327,21 @@ func TestFunctionDeclarations(t *testing.T) {
 
 	_, ok := program.Functions[0].Statements[0].(*ast.VariableDefineStatement)
 	assert.True(t, ok, "cannot cast statement to VariableDefineStatement")
+}
+
+func TestVariableUpdate(t *testing.T) {
+	input := `int x;
+	x = 5;`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+
+	assert.Equal(t, 2, len(program.Statements), "expected two statements")
+
+	for _, s := range program.Statements {
+		fmt.Printf("statement: %+v\n", s)
+	}
+
 }
