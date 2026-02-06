@@ -113,10 +113,11 @@ func (f *Function) GetVariableCounts() (integerCount, floatCount int) {
 	return
 }
 
-func (f *Function) SetSymbol(name string, t ValueType) *Symbol {
+func (f *Function) SetSymbol(name string, t ValueType, constant bool) *Symbol {
 	s := &Symbol{
-		Index: f.NextSymbolIndex,
-		Type:  t,
+		Index:    f.NextSymbolIndex,
+		Type:     t,
+		Constant: constant,
 	}
 	f.Symbols[name] = s
 	f.NextSymbolIndex++
@@ -128,8 +129,9 @@ func (f *Function) GetSymbol(name string) *Symbol {
 }
 
 type Symbol struct {
-	Index int
-	Type  ValueType
+	Index    int
+	Type     ValueType
+	Constant bool
 }
 
 type Identifier struct {

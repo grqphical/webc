@@ -160,7 +160,7 @@ func (p *Parser) expectPeek(t lexer.TokenType) bool {
 
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
-	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword:
+	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword, lexer.TokenConst:
 		return p.parseVariableDefineStatement()
 	case lexer.TokenIdent:
 		return p.parseVariableUpdateStatement()
@@ -185,6 +185,24 @@ func (p *Parser) parseVariableUpdateStatement() ast.Statement {
 		})
 		return nil
 	}
+	if symbol.Constant {
+		p.errors = append(p.errors, ParseError{
+			message: fmt.Sprintf("cannot modify constant variable %s", p.curToken.Literal),
+			line:    p.curToken.Line,
+		})
+
+		// ERROR RECOVERY: We must skip the rest of this invalid statement
+		// until we find a semicolon, otherwise the parser will crash on the next token.
+		for !p.curTokenIs(lexer.TokenSemicolon) && !p.curTokenIs(lexer.TokenEndOfFile) {
+			p.nextToken()
+		}
+		if p.peekTokenIs(lexer.TokenSemicolon) {
+			p.nextToken()
+		}
+
+		return nil
+	}
+
 	name.Symbol = symbol
 
 	stmt := &ast.VariableUpdateStatement{Name: name, Token: p.curToken}
@@ -203,6 +221,12 @@ func (p *Parser) parseVariableUpdateStatement() ast.Statement {
 }
 
 func (p *Parser) parseVariableDefineStatement() ast.Statement {
+	constant := false
+	if p.curTokenIs(lexer.TokenConst) {
+		constant = true
+		p.nextToken()
+	}
+
 	t := ast.ValueType(p.curToken.Literal)
 	stmt := &ast.VariableDefineStatement{Token: p.curToken, Type: t}
 
@@ -210,7 +234,7 @@ func (p *Parser) parseVariableDefineStatement() ast.Statement {
 		return nil
 	}
 
-	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.SetSymbol(p.curToken.Literal, t)}
+	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.SetSymbol(p.curToken.Literal, t, constant)}
 
 	if p.peekTokenIs(lexer.TokenSemicolon) {
 		// just defining the variable to be uninitialized
