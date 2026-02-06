@@ -7,7 +7,7 @@ You need to have Go version `1.25` or later installed (I have not tested with pr
 ### Recommendations
 I **HIGHLY RECOMMEND** having GNU `make` installed; there should be versions for most major Operating Systems
 
-I also recommend using [The WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) to debug WASM binaries, not necessary but will save you countless hours
+I also recommend using [The WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) to debug WASM binaries, not necessary but they will save you countless hours
 
 ## Code Style
 All conventions should be based on Go's standard style conventions which you can read [here](https://google.github.io/styleguide/go/guide)
