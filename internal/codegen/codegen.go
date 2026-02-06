@@ -322,12 +322,21 @@ func (m *WASMModule) generateReturnStatement(stmt *ast.ReturnStatement, funcBody
 	return nil
 }
 
+func (m *WASMModule) generateVariableUpdate(stmt *ast.VariableUpdateStatement, funcBody *bytes.Buffer) error {
+	m.generateExpressionCode(stmt.NewValue, funcBody)
+	funcBody.WriteByte(OpCodeLocalSet)
+	funcBody.Write(EncodeULEB128(uint32(stmt.Name.Symbol.Index)))
+	return nil
+}
+
 func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffer) error {
 	switch s := stmt.(type) {
 	case *ast.VariableDefineStatement:
 		return m.generateVariableDefinition(s, funcBody)
 	case *ast.ReturnStatement:
 		return m.generateReturnStatement(s, funcBody)
+	case *ast.VariableUpdateStatement:
+		return m.generateVariableUpdate(s, funcBody)
 	default:
 		return errors.New("unknown statement type")
 	}

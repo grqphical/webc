@@ -185,9 +185,11 @@ func (p *Parser) parseVariableUpdateStatement() ast.Statement {
 		})
 		return nil
 	}
+	name.Symbol = symbol
 
 	stmt := &ast.VariableUpdateStatement{Name: name, Token: p.curToken}
 
+	p.nextToken()
 	stmt.Operation = p.curToken.Literal
 	p.nextToken()
 
