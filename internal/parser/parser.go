@@ -60,6 +60,8 @@ func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
 		l:      l,
 		errors: make([]ParseError, 0),
+		// create a global "function" to store global variables and stuff
+		curFunction: ast.NewFunction("_global", ast.ValueTypeVoid),
 	}
 
 	// read the first three characters so that curToken, peekToken and peekToken2 are set
@@ -71,6 +73,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.TokenIdent, p.parseIdentifier)
 	p.registerPrefix(lexer.TokenIntLiteral, p.parseIntegerLiteral)
 	p.registerPrefix(lexer.TokenFloatLiteral, p.parseFloatLiteral)
+	p.registerPrefix(lexer.TokenCharLiteral, p.parseCharLiteral)
 	p.registerPrefix(lexer.TokenDash, p.parsePrefixExpression)
 
 	p.infixParseFns = make(map[lexer.TokenType]infixParseFn)
@@ -277,6 +280,13 @@ func (p *Parser) parseFloatLiteral() ast.Expression {
 	}
 
 	lit.Value = value
+	return lit
+}
+
+func (p *Parser) parseCharLiteral() ast.Expression {
+	lit := &ast.CharLiteral{Token: p.curToken}
+	lit.Value = p.curToken.Literal[0]
+
 	return lit
 }
 

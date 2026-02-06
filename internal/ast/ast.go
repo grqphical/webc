@@ -242,6 +242,16 @@ func (fl *FloatLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FloatLiteral) String() string       { return fl.Token.Literal }
 func (fl *FloatLiteral) ValueType() ValueType { return fl.Type }
 
+type CharLiteral struct {
+	Token lexer.Token
+	Value byte
+}
+
+func (cl *CharLiteral) expressionNode()      {}
+func (cl *CharLiteral) TokenLiteral() string { return cl.Token.Literal }
+func (cl *CharLiteral) String() string       { return cl.Token.Literal }
+func (fl *CharLiteral) ValueType() ValueType { return ValueTypeChar }
+
 type PrefixExpression struct {
 	Token    lexer.Token
 	Operator string

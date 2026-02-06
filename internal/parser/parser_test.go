@@ -11,7 +11,8 @@ import (
 
 func TestVariableDefineStatement(t *testing.T) {
 	input := `int x = 5;
-	float y = 5.6;`
+	float y = 5.6;
+	char z = 'a';`
 
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -19,13 +20,14 @@ func TestVariableDefineStatement(t *testing.T) {
 	program := p.ParseProgram()
 	assert.Empty(t, p.Errors())
 	assert.NotNil(t, program)
-	assert.Equal(t, len(program.Statements), 2, "should have two statements")
+	assert.Equal(t, len(program.Statements), 3, "should have three statements")
 
 	tests := []struct {
 		expectedIdentifier string
 	}{
 		{"x"},
 		{"y"},
+		{"z"},
 	}
 
 	for i, tt := range tests {
@@ -45,14 +47,15 @@ func TestVariableDefineStatement(t *testing.T) {
 func TestReturnStatement(t *testing.T) {
 	input := `return 5;
 	return 10;
-	return 10.58;`
+	return 10.58;
+	return 'b';`
 
 	l := lexer.New(input)
 	p := parser.New(l)
 
 	program := p.ParseProgram()
 	assert.NotNil(t, program)
-	assert.Equal(t, len(program.Statements), 3, "should have three statements")
+	assert.Equal(t, len(program.Statements), 4, "should have four statements")
 
 	for _, stmt := range program.Statements {
 		returnStmt, ok := stmt.(*ast.ReturnStatement)
@@ -114,6 +117,24 @@ func TestFloatLiteralExpression(t *testing.T) {
 	literal, ok := stmt.Expression.(*ast.FloatLiteral)
 	assert.True(t, ok, "could not cast expression to FloatLiteral")
 	assert.Equal(t, "5.4", literal.TokenLiteral())
+}
+
+func TestCharLiteralExpression(t *testing.T) {
+	input := "'z';"
+
+	l := lexer.New(input)
+	p := parser.New(l)
+
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Equal(t, 1, len(program.Statements), "should have one statement")
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+	literal, ok := stmt.Expression.(*ast.CharLiteral)
+	assert.True(t, ok, "could not cast expression to CharLiteral")
+	assert.Equal(t, "z", literal.TokenLiteral())
 }
 
 func TestIntegerPrefixOperators(t *testing.T) {
