@@ -108,6 +108,20 @@ func (l *Lexer) readComment() {
 	}
 }
 
+// Consumes a multiline comment
+func (l *Lexer) readMultiLineComment() {
+	for true {
+		l.readChar()
+		if l.ch == '*' && l.peekChar() == '/' {
+			break
+		}
+	}
+
+	for l.ch != '\n' {
+		l.readChar()
+	}
+}
+
 // Creates a token based on the current character and then advances the lexer
 func (l *Lexer) NextToken() Token {
 	var tok Token
@@ -159,6 +173,9 @@ func (l *Lexer) NextToken() Token {
 		} else if l.peekChar() == '/' {
 			// skip lines with comments on them
 			l.readComment()
+			return l.NextToken()
+		} else if l.peekChar() == '*' {
+			l.readMultiLineComment()
 			return l.NextToken()
 		} else {
 			tok = newToken(TokenSlash, string(l.ch), l.lineCount)

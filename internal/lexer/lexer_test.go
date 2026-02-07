@@ -146,3 +146,29 @@ func TestComments(t *testing.T) {
 		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
 }
+
+func TestMultilineComments(t *testing.T) {
+	input := `/*
+	foobar, I am a comment
+	*/
+	int x = 5;`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TokenIntKeyword, "int"},
+		{lexer.TokenIdent, "x"},
+		{lexer.TokenEqual, "="},
+		{lexer.TokenIntLiteral, "5"},
+		{lexer.TokenSemicolon, ";"},
+		{lexer.TokenEndOfFile, ""},
+	}
+	l := lexer.New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
+	}
+}
