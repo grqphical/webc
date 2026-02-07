@@ -11,6 +11,7 @@ import (
 	"github.com/grqphical/webc/internal/codegen"
 	"github.com/grqphical/webc/internal/lexer"
 	"github.com/grqphical/webc/internal/parser"
+	"github.com/grqphical/webc/internal/preprocessor"
 )
 
 const version string = "v0.1.0-alpha"
@@ -41,7 +42,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	lexer := lexer.New(string(sourceCode))
+	preProcessor := preprocessor.New(templateFS)
+	preProcessedSource, err := preProcessor.Parse(string(sourceCode))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while preprocessing file: %v\n", err)
+		os.Exit(1)
+	}
+
+	lexer := lexer.New(preProcessedSource)
 
 	parser := parser.New(lexer)
 	program := parser.ParseProgram()

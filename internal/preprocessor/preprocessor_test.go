@@ -1,6 +1,7 @@
 package preprocessor_test
 
 import (
+	"embed"
 	"testing"
 
 	"github.com/grqphical/webc/internal/preprocessor"
@@ -11,7 +12,7 @@ func TestDefinitions(t *testing.T) {
 	input := `#define FOOBAR 1
 	#define BARFOO Hello World`
 
-	pp := preprocessor.New()
+	pp := preprocessor.New(embed.FS{})
 	_, err := pp.Parse(input)
 	assert.NoError(t, err)
 
@@ -34,7 +35,7 @@ func TestIfStatements(t *testing.T) {
 	boo
 `
 
-	pp := preprocessor.New()
+	pp := preprocessor.New(embed.FS{})
 	source, err := pp.Parse(input)
 	assert.NoError(t, err)
 
