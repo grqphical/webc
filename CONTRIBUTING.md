@@ -19,8 +19,6 @@ All conventions should be based on Go's standard style conventions which you can
 ### Formatting
 I use `gofmt` to format webc, it comes with `go` so there is no need to install extra tools
 
-For any files in `templates/` (HTML and JS files), use `prettier` to format them (`npm install -g prettier`).
-
 `make format` should do all the formatting for you, you just need to make sure the formatters are instaled.
 
 ### File Organization

@@ -36,7 +36,6 @@ build:
 .PHONY: foramt
 format:
 	@go fmt ./...
-	@npx prettier ./templates --write
 
 # Runs the unit/integration tests
 .PHONY: test
