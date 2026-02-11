@@ -37,7 +37,8 @@ You can use the `-o` flag to change where the output binary will be.
 - [ ] If/Else-If/Else Statements
 - [ ] For/While loops
 - [ ] Functions
-- [ ] Preprocessor (include, define, ifdef, etc.)
+- [x] Basic Preprocessor (include, define, ifdef, ifndef)
+- [ ] Advanced Preprocessor (macros, full if statements, etc.)
 - [ ] Dynamic Memory (malloc/free)
 - [ ] Structs, Unions, Typedefs
 - [ ] Static variables

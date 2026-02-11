@@ -32,6 +32,8 @@ For any files in `templates/` (HTML and JS files), use `prettier` to format them
 
 `internal/codegen` is code for the WASM code generator
 
+`internal/preprocessor` is code for the preprocessor
+
 `internal/ast` contains structs that represent nodes in the Abstract Syntax Tree
 
 `templates` contains templates for the HTML/JS wrapper code that gets created with the compiler
