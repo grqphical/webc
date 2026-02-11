@@ -1,14 +1,13 @@
+{{define "server-js"}}
 const fs = require("fs");
 const bytes = fs.readFileSync("{{.BinaryName}}");
 
-function putchar(c) {
-  process.stdout.write(String.fromCharCode(c));
-}
+{{template "stdio" .}}
 
 WebAssembly.instantiate(bytes, {
-  "libc": {
-    "putchar": putchar,
-  }
+  libc: {
+    putchar: putchar,
+  },
 }).then((results) => {
   const { main } = results.instance.exports;
   const exitCode = main();
@@ -18,3 +17,4 @@ WebAssembly.instantiate(bytes, {
     );
   }
 });
+{{end}}

@@ -85,12 +85,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		jsTemplate, err := templateFS.ReadFile("templates/browser.js")
+		tmpl, err := template.New("").ParseFS(templateFS, "templates/*.js", "templates/stdlib/lib/*.js")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
-		tmpl := template.Must(template.New("browser.js").Parse(string(jsTemplate)))
 
 		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0644)
 		defer jsFile.Close()
@@ -100,14 +99,14 @@ func main() {
 		}
 		tmpl.Execute(jsFile, map[string]any{
 			"BinaryName": filepath.Base(*outputName),
+			"Server":     false,
 		})
 	} else {
-		jsTemplate, err := templateFS.ReadFile("templates/server.js")
+		tmpl, err := template.New("").ParseFS(templateFS, "templates/*.js", "templates/stdlib/lib/*.js")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
-		tmpl := template.Must(template.New("server.js").Parse(string(jsTemplate)))
 
 		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0644)
 		defer jsFile.Close()
@@ -115,8 +114,9 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
-		tmpl.Execute(jsFile, map[string]any{
+		tmpl.ExecuteTemplate(jsFile, "server-js", map[string]any{
 			"BinaryName": filepath.Base(*outputName),
+			"Server":     true,
 		})
 
 	}

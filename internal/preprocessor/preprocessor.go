@@ -122,7 +122,7 @@ func (p *Preprocessor) Parse(sourceCode string) (string, error) {
 				return "", err
 			}
 
-			file, err := p.templateFS.ReadFile(filepath.Join("templates", "stdlib", path))
+			file, err := p.templateFS.ReadFile(filepath.Join("templates", "stdlib", "include", path))
 			if err != nil {
 				return "", err
 			}
