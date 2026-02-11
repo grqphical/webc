@@ -405,6 +405,11 @@ func (p *Parser) parseFunction() *ast.Function {
 		return nil
 	}
 
+	// if the line ends with a semicolon, its just a function definition
+	if p.peekTokenIs(lexer.TokenSemicolon) {
+		return function
+	}
+
 	// skip '{'
 	if !p.expectPeek(lexer.TokenLBrace) {
 		return nil
@@ -429,7 +434,6 @@ func (p *Parser) parseFunction() *ast.Function {
 
 	return function
 }
-
 func (p *Parser) isTypeKeyword(t lexer.TokenType) bool {
 	return t == lexer.TokenIntKeyword ||
 		t == lexer.TokenFloatKeyword ||
@@ -449,7 +453,12 @@ func (p *Parser) ParseProgram() *ast.Program {
 		if isFunc {
 			function := p.parseFunction()
 			if function != nil {
-				program.Functions = append(program.Functions, function)
+				if idx := program.FunctionExists(function.Name); idx == -1 {
+					program.Functions = append(program.Functions, function)
+				} else {
+					// handle functions that have been defined without bodies (in header files for example)
+					program.Functions[idx].Statements = function.Statements
+				}
 			}
 		} else {
 			stmt := p.parseStatement()

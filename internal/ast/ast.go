@@ -61,6 +61,18 @@ func (p *Program) Type() ValueType {
 	return ValueTypeVoid
 }
 
+// checks if a function exists, if so returns it's index.
+// otherwise the function returns -1
+func (p *Program) FunctionExists(name string) int {
+	for i, f := range p.Functions {
+		if f.Name == name {
+			return i
+		}
+	}
+
+	return -1
+}
+
 type Function struct {
 	Name            string
 	ReturnType      ValueType
