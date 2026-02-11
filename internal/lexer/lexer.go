@@ -184,7 +184,12 @@ func (l *Lexer) NextToken() Token {
 		}
 	case '\'':
 		tok.Type = TokenCharLiteral
-		tok.Literal = l.readCharLiteral()
+		literal := l.readCharLiteral()
+		if literal == "\\n" {
+			literal = "\n"
+		}
+
+		tok.Literal = literal
 	case 0:
 		tok.Literal = ""
 		tok.Type = TokenEndOfFile
