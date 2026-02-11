@@ -38,6 +38,10 @@ func New(templateFS embed.FS) *Preprocessor {
 	defs := make(map[string]string)
 
 	defs["__wasm__"] = "1"
+	defs["__wasm32__"] = "1"
+	defs["__EMSCRIPTEN__"] = "1"
+	defs["__ILP32__"] = "1"
+	defs["__BIGGEST_ALIGNMENT__"] = "16"
 	defs["__webc__"] = "1"
 
 	return &Preprocessor{
