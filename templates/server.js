@@ -1,7 +1,15 @@
 const fs = require("fs");
 const bytes = fs.readFileSync("{{.BinaryName}}");
 
-WebAssembly.instantiate(bytes).then((results) => {
+function putchar(c) {
+  process.stdout.write(String.fromCharCode(c));
+}
+
+WebAssembly.instantiate(bytes, {
+  "libc": {
+    "putchar": putchar,
+  }
+}).then((results) => {
   const { main } = results.instance.exports;
   const exitCode = main();
   if (exitCode != 0) {

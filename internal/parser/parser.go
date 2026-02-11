@@ -54,6 +54,8 @@ type Parser struct {
 	infixParseFns  map[lexer.TokenType]infixParseFn
 
 	curFunction *ast.Function
+
+	program *ast.Program
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -271,7 +273,58 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.GetSymbol(p.curToken.Literal)}
+	if !p.peekTokenIs(lexer.TokenLParen) {
+		// not a function call so return the identifier
+		return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.GetSymbol(p.curToken.Literal)}
+	}
+	f := &ast.FunctionCallExpression{Token: p.curToken, Name: p.curToken.Literal}
+
+	funcExists := false
+	for _, definedFunc := range p.program.Functions {
+		if definedFunc.Name == f.Name {
+			f.ReturnType = definedFunc.ReturnType
+			funcExists = true
+		}
+	}
+	for i, definedFunc := range p.program.ExternalFunctions {
+		if definedFunc.Name == f.Name {
+			f.ReturnType = definedFunc.ReturnType
+			f.Index = i
+			funcExists = true
+		}
+	}
+
+	if !funcExists {
+		p.errors = append(p.errors, ParseError{
+			message: fmt.Sprintf("unknown function '%s'", f.Name),
+			line:    f.Token.Line,
+		})
+		return nil
+	}
+
+	if !p.expectPeek(lexer.TokenLParen) {
+		return nil
+	}
+
+	if p.peekTokenIs(lexer.TokenRParen) {
+		p.nextToken() // consume ')'
+		return f
+	}
+
+	p.nextToken() // Move p.curToken to the first argument
+	f.Args = append(f.Args, p.parseExpression(PrecendenceLowest))
+
+	for p.peekTokenIs(lexer.TokenComma) {
+		p.nextToken()
+		p.nextToken()
+		f.Args = append(f.Args, p.parseExpression(PrecendenceLowest))
+	}
+
+	if !p.expectPeek(lexer.TokenRParen) {
+		return nil
+	}
+
+	return f
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
@@ -282,7 +335,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
-	for !p.peekTokenIs(lexer.TokenSemicolon) && precedence < p.peekPrecedence() {
+	for !p.peekTokenIs(lexer.TokenSemicolon) && !p.peekTokenIs(lexer.TokenComma) && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
@@ -482,8 +535,8 @@ func (p *Parser) isTypeKeyword(t lexer.TokenType) bool {
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
-	program := &ast.Program{}
-	program.Functions = make([]*ast.Function, 0)
+	p.program = &ast.Program{}
+	p.program.Functions = make([]*ast.Function, 0)
 
 	for p.curToken.Type != lexer.TokenEndOfFile {
 		extern := p.curTokenIs(lexer.TokenExtern)
@@ -501,8 +554,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 			if extern {
 				function = p.parseFunction(true)
 				if function != nil {
-					if idx := program.FunctionExists(function.Name); idx == -1 {
-						program.ExternalFunctions = append(program.ExternalFunctions, function)
+					if idx := p.program.FunctionExists(function.Name); idx == -1 {
+						p.program.ExternalFunctions = append(p.program.ExternalFunctions, function)
 					} else {
 						p.errors = append(p.errors, ParseError{
 							message: "function overrides not supported",
@@ -513,11 +566,11 @@ func (p *Parser) ParseProgram() *ast.Program {
 			} else {
 				function = p.parseFunction(false)
 				if function != nil {
-					if idx := program.FunctionExists(function.Name); idx == -1 {
-						program.Functions = append(program.Functions, function)
+					if idx := p.program.FunctionExists(function.Name); idx == -1 {
+						p.program.Functions = append(p.program.Functions, function)
 					} else {
 						// handle functions that have been defined without bodies (in header files for example)
-						program.Functions[idx].Statements = function.Statements
+						p.program.Functions[idx].Statements = function.Statements
 					}
 				}
 			}
@@ -525,12 +578,12 @@ func (p *Parser) ParseProgram() *ast.Program {
 		} else {
 			stmt := p.parseStatement()
 			if stmt != nil {
-				program.Statements = append(program.Statements, stmt)
+				p.program.Statements = append(p.program.Statements, stmt)
 			}
 		}
 
 		p.nextToken()
 	}
 
-	return program
+	return p.program
 }

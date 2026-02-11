@@ -13,8 +13,11 @@ import (
 
 const magicNumberAndVersion = "\x00asm\x01\x00\x00\x00"
 
+const stdlibModuleName = "libc"
+
 const (
 	SecType     byte = 1
+	SecImports  byte = 2
 	SecFunction byte = 3
 	SecExport   byte = 7
 	SecCode     byte = 10
@@ -26,8 +29,9 @@ const (
 )
 
 const (
-	OpCodeEnd    byte = 0x0B
-	OpCodeReturn byte = 0x0F
+	OpCodeEnd          byte = 0x0B
+	OpCodeReturn       byte = 0x0F
+	OpCodeCallFunction byte = 0x10
 
 	OpCodeLocalGet byte = 0x20
 	OpCodeLocalSet byte = 0x21
@@ -121,9 +125,41 @@ func (m *WASMModule) writeSection(id byte, payload []byte) {
 	m.buffer.Write(payload)
 }
 
+func (m *WASMModule) generateImportSection() {
+	importPayload := bytes.Buffer{}
+	importPayload.Write(EncodeULEB128(uint32(len(m.program.ExternalFunctions))))
+
+	for i, f := range m.program.ExternalFunctions {
+		importPayload.Write(EncodeULEB128(uint32(len(stdlibModuleName))))
+		importPayload.WriteString(stdlibModuleName)
+
+		importPayload.Write(EncodeULEB128(uint32(len(f.Name))))
+		importPayload.WriteString(f.Name)
+
+		importPayload.WriteByte(0) // type: function
+		importPayload.Write(EncodeULEB128(uint32(i)))
+	}
+
+	m.writeSection(SecImports, importPayload.Bytes())
+
+}
+
 func (m *WASMModule) generateTypeSection() {
 	typePayload := bytes.Buffer{}
-	typePayload.Write(EncodeULEB128(uint32(len(m.program.Functions)))) // count of types
+	typePayload.Write(EncodeULEB128(uint32(len(m.program.Functions) + len(m.program.ExternalFunctions)))) // count of types
+	for _, f := range m.program.ExternalFunctions {
+		typePayload.WriteByte(0x60)                                // function type
+		typePayload.Write(EncodeULEB128(uint32(len(f.Arguments)))) // Param count
+		for _, arg := range f.Arguments {
+			switch arg.Type {
+			case ast.ValueTypeInt, ast.ValueTypeChar:
+				typePayload.WriteByte(0x7F)
+			case ast.ValueTypeFloat:
+				typePayload.WriteByte(0x7D)
+			}
+		}
+		typePayload.Write(EncodeULEB128(0)) // Result count: 0
+	}
 
 	for _, f := range m.program.Functions {
 		typePayload.WriteByte(0x60)         // function type
@@ -145,8 +181,8 @@ func (m *WASMModule) generateFunctionSection() {
 
 	funcPayload.Write(EncodeULEB128(count))
 
-	for range m.program.Functions {
-		funcPayload.Write(EncodeULEB128(0))
+	for i := range m.program.Functions {
+		funcPayload.Write(EncodeULEB128(uint32(len(m.program.ExternalFunctions) + i)))
 	}
 
 	m.writeSection(SecFunction, funcPayload.Bytes())
@@ -161,7 +197,7 @@ func (m *WASMModule) generateExportSection() {
 	foundMain := false
 	for i, f := range m.program.Functions {
 		if f.Name == "main" {
-			mainIndex = i
+			mainIndex = len(m.program.ExternalFunctions) + i
 			foundMain = true
 			break
 		}
@@ -235,6 +271,16 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		funcBody.WriteByte(OpCodeLocalGet)
 		funcBody.Write(EncodeULEB128(uint32(index)))
 		return nil
+	case *ast.FunctionCallExpression:
+		index := e.Index
+		for _, arg := range e.Args {
+			err := m.generateExpressionCode(arg, funcBody)
+			if err != nil {
+				return err
+			}
+		}
+		funcBody.WriteByte(OpCodeCallFunction)
+		funcBody.Write(EncodeULEB128(uint32(index)))
 	case *ast.PrefixExpression:
 		switch e.Operator {
 		case "-":
@@ -383,13 +429,16 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 		return m.generateReturnStatement(s, funcBody)
 	case *ast.VariableUpdateStatement:
 		return m.generateVariableUpdate(s, funcBody)
+	case *ast.ExpressionStatement:
+		return m.generateExpressionCode(s.Expression, funcBody)
 	default:
-		return errors.New("unknown statement type")
+		return fmt.Errorf("unknown statement type '%s'", s.String())
 	}
 }
 
 func (m *WASMModule) Generate() error {
 	m.generateTypeSection()
+	m.generateImportSection()
 	m.generateFunctionSection()
 	m.generateExportSection()
 	return m.generateCodeSection()

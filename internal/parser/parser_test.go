@@ -365,3 +365,20 @@ func TestFunctionArguments(t *testing.T) {
 
 	assert.Equal(t, 1, len(program.Functions), "expected one function")
 }
+
+func TestFunctionCall(t *testing.T) {
+	input := `void foo(int a, float b);
+	foo(1, 1.5);`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equal(t, 1, len(program.Functions), "expected one function")
+	assert.Equal(t, 1, len(program.Statements))
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	assert.Truef(t, ok, "could not convert type to ExpressionStatement, got %T instead", stmt)
+}

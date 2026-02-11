@@ -355,3 +355,29 @@ func (ie *InfixExpression) String() string {
 func (ie *InfixExpression) ValueType() ValueType {
 	return ie.Left.ValueType()
 }
+
+type FunctionCallExpression struct {
+	Token      lexer.Token
+	Name       string
+	Args       []Expression
+	ReturnType ValueType
+	Index      int
+}
+
+func (fce *FunctionCallExpression) expressionNode()      {}
+func (fce *FunctionCallExpression) TokenLiteral() string { return fce.Token.Literal }
+func (fce *FunctionCallExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(fce.Name)
+	out.WriteString("(")
+	for _, arg := range fce.Args {
+		out.WriteString(arg.String())
+	}
+	out.WriteString(")")
+
+	return out.String()
+}
+func (fce *FunctionCallExpression) ValueType() ValueType {
+	return fce.ReturnType
+}
