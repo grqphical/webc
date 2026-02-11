@@ -34,6 +34,9 @@ type Expression interface {
 type Program struct {
 	Functions []*Function
 
+	// Functions to be imported from JS
+	ExternalFunctions []*Function
+
 	// global statements
 	Statements []Statement
 }

@@ -340,3 +340,16 @@ func TestVariableUpdate(t *testing.T) {
 	assert.Equal(t, 2, len(program.Statements), "expected two statements")
 
 }
+
+func TestExternFunction(t *testing.T) {
+	input := `extern void foo();`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equal(t, 1, len(program.ExternalFunctions), "expected one external function")
+	assert.Equal(t, 0, len(program.Functions), "expected zero external functions")
+}

@@ -32,6 +32,8 @@ const (
 	TokenCharKeyword  TokenType = "char"
 	TokenReturn       TokenType = "return"
 	TokenConst        TokenType = "const"
+	TokenExtern       TokenType = "extern"
+	TokenVoid         TokenType = "void"
 
 	TokenEndOfFile TokenType = "EOF"
 	TokenIllegal   TokenType = "ILLEGAL"
@@ -43,6 +45,8 @@ var keywords = map[string]TokenType{
 	"char":   TokenCharKeyword,
 	"return": TokenReturn,
 	"const":  TokenConst,
+	"extern": TokenExtern,
+	"void":   TokenVoid,
 }
 
 func lookupIdent(ident string) TokenType {

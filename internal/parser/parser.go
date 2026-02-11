@@ -388,7 +388,7 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expression
 }
 
-func (p *Parser) parseFunction() *ast.Function {
+func (p *Parser) parseFunction(extern bool) *ast.Function {
 	t := p.curToken.Literal
 	p.nextToken()
 	name := p.curToken.Literal
@@ -406,30 +406,38 @@ func (p *Parser) parseFunction() *ast.Function {
 	}
 
 	// if the line ends with a semicolon, its just a function definition
-	if p.peekTokenIs(lexer.TokenSemicolon) {
-		return function
-	}
-
-	// skip '{'
-	if !p.expectPeek(lexer.TokenLBrace) {
-		return nil
-	}
-	p.nextToken()
-
-	for p.curToken.Type != lexer.TokenRBrace {
-		if p.curToken.Type == lexer.TokenEndOfFile {
-			p.errors = append(p.errors, ParseError{
-				message: "expected }, got EOF instead",
-				line:    p.curToken.Line,
-			})
+	if !extern {
+		if p.peekTokenIs(lexer.TokenSemicolon) {
+			return function
+		}
+	} else {
+		if !p.expectPeek(lexer.TokenSemicolon) {
 			return nil
 		}
+	}
 
-		stmt := p.parseStatement()
-		if stmt != nil {
-			function.Statements = append(function.Statements, stmt)
+	if !extern {
+		// skip '{'
+		if !p.expectPeek(lexer.TokenLBrace) {
+			return nil
 		}
 		p.nextToken()
+
+		for p.curToken.Type != lexer.TokenRBrace {
+			if p.curToken.Type == lexer.TokenEndOfFile {
+				p.errors = append(p.errors, ParseError{
+					message: "expected }, got EOF instead",
+					line:    p.curToken.Line,
+				})
+				return nil
+			}
+
+			stmt := p.parseStatement()
+			if stmt != nil {
+				function.Statements = append(function.Statements, stmt)
+			}
+			p.nextToken()
+		}
 	}
 
 	return function
@@ -437,7 +445,7 @@ func (p *Parser) parseFunction() *ast.Function {
 func (p *Parser) isTypeKeyword(t lexer.TokenType) bool {
 	return t == lexer.TokenIntKeyword ||
 		t == lexer.TokenFloatKeyword ||
-		t == lexer.TokenCharKeyword
+		t == lexer.TokenCharKeyword || t == lexer.TokenVoid
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
@@ -445,21 +453,40 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program.Functions = make([]*ast.Function, 0)
 
 	for p.curToken.Type != lexer.TokenEndOfFile {
+		extern := p.curTokenIs(lexer.TokenExtern)
+		if extern {
+			p.nextToken()
+		}
+
 		// functions are form [type] [identifier]()
 		isFunc := p.isTypeKeyword(p.curToken.Type) &&
 			p.peekTokenIs(lexer.TokenIdent) &&
 			p.doublePeekTokenIs(lexer.TokenLParen)
 
 		if isFunc {
-			function := p.parseFunction()
-			if function != nil {
+			var function *ast.Function
+			if extern {
+				function = p.parseFunction(true)
 				if idx := program.FunctionExists(function.Name); idx == -1 {
-					program.Functions = append(program.Functions, function)
+					program.ExternalFunctions = append(program.ExternalFunctions, function)
 				} else {
-					// handle functions that have been defined without bodies (in header files for example)
-					program.Functions[idx].Statements = function.Statements
+					p.errors = append(p.errors, ParseError{
+						message: "function overrides not supported",
+						line:    p.curToken.Line,
+					})
+				}
+			} else {
+				function = p.parseFunction(false)
+				if function != nil {
+					if idx := program.FunctionExists(function.Name); idx == -1 {
+						program.Functions = append(program.Functions, function)
+					} else {
+						// handle functions that have been defined without bodies (in header files for example)
+						program.Functions[idx].Statements = function.Statements
+					}
 				}
 			}
+
 		} else {
 			stmt := p.parseStatement()
 			if stmt != nil {
