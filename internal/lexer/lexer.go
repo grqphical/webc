@@ -141,6 +141,8 @@ func (l *Lexer) NextToken() Token {
 		tok = newToken(TokenLBrace, string(l.ch), l.lineCount)
 	case '}':
 		tok = newToken(TokenRBrace, string(l.ch), l.lineCount)
+	case ',':
+		tok = newToken(TokenComma, string(l.ch), l.lineCount)
 	case '+':
 		if l.peekChar() == '=' {
 			ch := l.ch

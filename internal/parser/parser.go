@@ -396,9 +396,41 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 	function.Statements = make([]ast.Statement, 0)
 	p.curFunction = function
 
-	// just skip '()' for now, we will deal with arguments later
 	if !p.expectPeek(lexer.TokenLParen) {
 		return nil
+	}
+
+	// handle argument parsing
+	if !p.peekTokenIs(lexer.TokenRParen) {
+		p.nextToken()
+
+		for {
+			if !p.isTypeKeyword(p.curToken.Type) {
+				p.errors = append(p.errors, ParseError{
+					message: fmt.Sprintf("expected type, got %s instead", p.curToken.Literal),
+					line:    p.curToken.Line,
+				})
+				return nil
+			}
+			argType := p.curToken.Literal
+			if !p.expectPeek(lexer.TokenIdent) {
+				return nil
+			}
+			name := p.curToken.Literal
+
+			function.Arguments = append(function.Arguments, ast.Argument{
+				Name: name,
+				Type: ast.ValueType(argType),
+			})
+
+			if p.peekTokenIs(lexer.TokenComma) {
+				// consume identifier and comma
+				p.nextToken()
+				p.nextToken()
+			} else {
+				break
+			}
+		}
 	}
 
 	if !p.expectPeek(lexer.TokenRParen) {
@@ -408,6 +440,7 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 	// if the line ends with a semicolon, its just a function definition
 	if !extern {
 		if p.peekTokenIs(lexer.TokenSemicolon) {
+			p.nextToken()
 			return function
 		}
 	} else {
@@ -467,13 +500,15 @@ func (p *Parser) ParseProgram() *ast.Program {
 			var function *ast.Function
 			if extern {
 				function = p.parseFunction(true)
-				if idx := program.FunctionExists(function.Name); idx == -1 {
-					program.ExternalFunctions = append(program.ExternalFunctions, function)
-				} else {
-					p.errors = append(p.errors, ParseError{
-						message: "function overrides not supported",
-						line:    p.curToken.Line,
-					})
+				if function != nil {
+					if idx := program.FunctionExists(function.Name); idx == -1 {
+						program.ExternalFunctions = append(program.ExternalFunctions, function)
+					} else {
+						p.errors = append(p.errors, ParseError{
+							message: "function overrides not supported",
+							line:    p.curToken.Line,
+						})
+					}
 				}
 			} else {
 				function = p.parseFunction(false)

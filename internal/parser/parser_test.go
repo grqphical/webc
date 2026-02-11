@@ -351,5 +351,17 @@ func TestExternFunction(t *testing.T) {
 	assert.Empty(t, p.Errors())
 
 	assert.Equal(t, 1, len(program.ExternalFunctions), "expected one external function")
-	assert.Equal(t, 0, len(program.Functions), "expected zero external functions")
+	assert.Equal(t, 0, len(program.Functions), "expected zero functions")
+}
+
+func TestFunctionArguments(t *testing.T) {
+	input := `void foo(int a, float b);`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equal(t, 1, len(program.Functions), "expected one function")
 }

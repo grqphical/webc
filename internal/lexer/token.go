@@ -15,6 +15,7 @@ const (
 	TokenRBrace TokenType = "}"
 
 	TokenSemicolon TokenType = ";"
+	TokenComma     TokenType = ","
 
 	TokenEqual TokenType = "="
 	TokenDash  TokenType = "-"

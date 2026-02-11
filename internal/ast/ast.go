@@ -76,6 +76,11 @@ func (p *Program) FunctionExists(name string) int {
 	return -1
 }
 
+type Argument struct {
+	Name string
+	Type ValueType
+}
+
 type Function struct {
 	Name            string
 	ReturnType      ValueType
@@ -83,6 +88,7 @@ type Function struct {
 	SymbolIndex     map[string]int
 	Symbols         []*Symbol
 	NextSymbolIndex int
+	Arguments       []Argument
 }
 
 func NewFunction(name string, returnType ValueType) *Function {

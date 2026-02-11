@@ -25,6 +25,7 @@ func TestWASMInplaceOperatorReturn(t *testing.T) {
 
 	p := parser.New(l)
 	program := p.ParseProgram()
+	assert.Empty(t, p.Errors())
 
 	module := codegen.NewModule(program)
 	err := module.Generate()

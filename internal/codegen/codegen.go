@@ -126,7 +126,6 @@ func (m *WASMModule) generateTypeSection() {
 	typePayload.Write(EncodeULEB128(uint32(len(m.program.Functions)))) // count of types
 
 	for _, f := range m.program.Functions {
-
 		typePayload.WriteByte(0x60)         // function type
 		typePayload.Write(EncodeULEB128(0)) // Param count: 0
 		typePayload.Write(EncodeULEB128(1)) // Result count: 1
