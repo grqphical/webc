@@ -97,7 +97,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
-		tmpl.Execute(jsFile, map[string]any{
+		tmpl.ExecuteTemplate(jsFile, "browser-js", map[string]any{
 			"BinaryName": filepath.Base(*outputName),
 			"Server":     false,
 		})

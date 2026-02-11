@@ -1,4 +1,12 @@
-WebAssembly.instantiateStreaming(fetch("/{{.BinaryName}}")).then((results) => {
+{{define "browser-js"}}
+
+{{template "stdio" .}}
+
+WebAssembly.instantiateStreaming(fetch("/{{.BinaryName}}"), {
+  libc: {
+    putchar: putchar,
+  },
+}).then((results) => {
   const { main } = results.instance.exports;
   const exitCode = main();
   if (exitCode != 0) {
@@ -7,3 +15,4 @@ WebAssembly.instantiateStreaming(fetch("/{{.BinaryName}}")).then((results) => {
     );
   }
 });
+{{end}}
