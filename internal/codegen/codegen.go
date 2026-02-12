@@ -158,7 +158,17 @@ func (m *WASMModule) generateTypeSection() {
 				typePayload.WriteByte(0x7D)
 			}
 		}
-		typePayload.Write(EncodeULEB128(0)) // Result count: 0
+
+		switch f.ReturnType {
+		case ast.ValueTypeVoid:
+			typePayload.Write(EncodeULEB128(0))
+		case ast.ValueTypeInt, ast.ValueTypeChar:
+			typePayload.Write(EncodeULEB128(1))
+			typePayload.WriteByte(0x7F)
+		case ast.ValueTypeFloat:
+			typePayload.Write(EncodeULEB128(1))
+			typePayload.WriteByte(0x7D)
+		}
 	}
 
 	for _, f := range m.program.Functions {
@@ -362,7 +372,6 @@ func (m *WASMModule) generateVariableDefinition(stmt *ast.VariableDefineStatemen
 
 func (m *WASMModule) generateReturnStatement(stmt *ast.ReturnStatement, funcBody *bytes.Buffer) error {
 	m.generateExpressionCode(stmt.ReturnValue, funcBody)
-	funcBody.WriteByte(OpCodeReturn)
 	return nil
 }
 

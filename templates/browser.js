@@ -1,10 +1,13 @@
 {{define "browser-js"}}
 
 {{template "stdio" .}}
+{{template "math" .}}
 
 WebAssembly.instantiateStreaming(fetch("/{{.BinaryName}}"), {
   libc: {
     putchar: putchar,
+
+    fabsf: fabsf,
   },
 }).then((results) => {
   const { main } = results.instance.exports;
