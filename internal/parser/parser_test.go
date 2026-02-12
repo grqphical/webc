@@ -313,7 +313,7 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 }
 
 func TestFunctionDeclarations(t *testing.T) {
-	input := `int main(){int x = 5;}`
+	input := `int main(){ int x = 5; }`
 
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -324,8 +324,11 @@ func TestFunctionDeclarations(t *testing.T) {
 	assert.Equal(t, "main", program.Functions[0].Name)
 	assert.Equal(t, 1, len(program.Functions[0].Statements), "did not get one statement")
 
-	_, ok := program.Functions[0].Statements[0].(*ast.VariableDefineStatement)
+	stmt, ok := program.Functions[0].Statements[0].(*ast.VariableDefineStatement)
 	assert.True(t, ok, "cannot cast statement to VariableDefineStatement")
+
+	assert.Equal(t, "x", stmt.Name.TokenLiteral())
+	assert.Equal(t, "5", stmt.Value.TokenLiteral())
 }
 
 func TestVariableUpdate(t *testing.T) {
@@ -338,7 +341,13 @@ func TestVariableUpdate(t *testing.T) {
 	assert.NotNil(t, program)
 
 	assert.Equal(t, 2, len(program.Statements), "expected two statements")
+	stmt1, ok := program.Statements[0].(*ast.VariableDefineStatement)
+	assert.Truef(t, ok, "could not convert first statement to VariableDefineStatement, got %T instead", stmt1)
 
+	stmt2, ok := program.Statements[1].(*ast.VariableUpdateStatement)
+	assert.Truef(t, ok, "could not convert first statement to VariableUpdateStatement, got %T instead", stmt2)
+
+	assert.Equal(t, "5", stmt2.NewValue.TokenLiteral())
 }
 
 func TestExternFunction(t *testing.T) {
@@ -352,6 +361,9 @@ func TestExternFunction(t *testing.T) {
 
 	assert.Equal(t, 1, len(program.ExternalFunctions), "expected one external function")
 	assert.Equal(t, 0, len(program.Functions), "expected zero functions")
+
+	assert.Equal(t, "foo", program.ExternalFunctions[0].Name)
+	assert.Empty(t, program.ExternalFunctions[0].Arguments)
 }
 
 func TestFunctionArguments(t *testing.T) {
@@ -364,6 +376,17 @@ func TestFunctionArguments(t *testing.T) {
 	assert.Empty(t, p.Errors())
 
 	assert.Equal(t, 1, len(program.Functions), "expected one function")
+	assert.Equal(t, "foo", program.Functions[0].Name)
+	assert.ElementsMatch(t, []ast.Argument{
+		{
+			Name: "a",
+			Type: ast.ValueTypeInt,
+		},
+		{
+			Name: "b",
+			Type: ast.ValueTypeFloat,
+		},
+	}, program.Functions[0].Arguments)
 }
 
 func TestFunctionCall(t *testing.T) {
@@ -377,8 +400,28 @@ func TestFunctionCall(t *testing.T) {
 	assert.Empty(t, p.Errors())
 
 	assert.Equal(t, 1, len(program.Functions), "expected one function")
+	assert.Equal(t, "foo", program.Functions[0].Name)
+	assert.ElementsMatch(t, []ast.Argument{
+		{
+			Name: "a",
+			Type: ast.ValueTypeInt,
+		},
+		{
+			Name: "b",
+			Type: ast.ValueTypeFloat,
+		},
+	}, program.Functions[0].Arguments)
+
 	assert.Equal(t, 1, len(program.Statements))
 
 	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
 	assert.Truef(t, ok, "could not convert type to ExpressionStatement, got %T instead", stmt)
+
+	exp, ok := stmt.Expression.(*ast.FunctionCallExpression)
+	assert.Truef(t, ok, "could not convert expression to FunctionCallExpression, got %T insttead", exp)
+	assert.Equal(t, 2, len(exp.Args), "did not get two arguments passed to function")
+
+	assert.Equal(t, "foo", exp.Name)
+	assert.Equal(t, "1", exp.Args[0].TokenLiteral())
+	assert.Equal(t, "1.5", exp.Args[1].TokenLiteral())
 }
