@@ -35,5 +35,5 @@ float main()
 	err = module.Save("temp/float_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/float_return.wasm", "main", float32(4.0), "f32")
+	AssertWASMBinary(t, "temp/float_return.wasm", "main", float32(4.0), ExpectedOutputF32)
 }

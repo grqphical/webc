@@ -30,5 +30,5 @@ func TestWASMFloatReturn(t *testing.T) {
 	err = module.Save("temp/float_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/float_return.wasm", "main", float32(20.1), "f32")
+	AssertWASMBinary(t, "temp/float_return.wasm", "main", float32(20.1), ExpectedOutputF32)
 }

@@ -30,5 +30,5 @@ func TestWASMIntegerReturn(t *testing.T) {
 	err = module.Save("temp/integer_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 20, "i32")
+	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 20, ExpectedOutputI32)
 }

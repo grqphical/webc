@@ -33,5 +33,5 @@ func TestWASMInplaceOperatorReturn(t *testing.T) {
 	err = module.Save("temp/integer_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 10, "i32")
+	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 10, ExpectedOutputI32)
 }
