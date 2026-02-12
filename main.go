@@ -65,7 +65,6 @@ func main() {
 	module := codegen.NewModule(program)
 	err = module.Generate()
 	if err != nil {
-
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}

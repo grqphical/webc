@@ -475,6 +475,7 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 				Name: name,
 				Type: ast.ValueType(argType),
 			})
+			function.SetSymbol(name, ast.ValueType(argType), false)
 
 			if p.peekTokenIs(lexer.TokenComma) {
 				// consume identifier and comma

@@ -172,13 +172,26 @@ func (m *WASMModule) generateTypeSection() {
 	}
 
 	for _, f := range m.program.Functions {
-		typePayload.WriteByte(0x60)         // function type
-		typePayload.Write(EncodeULEB128(0)) // Param count: 0
-		typePayload.Write(EncodeULEB128(1)) // Result count: 1
+		typePayload.WriteByte(0x60) // function type
+
+		typePayload.Write(EncodeULEB128(uint32(len(f.Arguments)))) // Param count
+		for _, arg := range f.Arguments {
+			switch arg.Type {
+			case ast.ValueTypeInt, ast.ValueTypeChar:
+				typePayload.WriteByte(0x7F)
+			case ast.ValueTypeFloat:
+				typePayload.WriteByte(0x7D)
+			}
+		}
+
 		switch f.ReturnType {
+		case ast.ValueTypeVoid:
+			typePayload.Write(EncodeULEB128(0))
 		case ast.ValueTypeInt, ast.ValueTypeChar:
+			typePayload.Write(EncodeULEB128(1))
 			typePayload.WriteByte(0x7F)
 		case ast.ValueTypeFloat:
+			typePayload.Write(EncodeULEB128(1))
 			typePayload.WriteByte(0x7D)
 		}
 	}
