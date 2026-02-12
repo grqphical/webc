@@ -11,12 +11,12 @@ import (
 
 func TestWASMInplaceOperatorReturn(t *testing.T) {
 	source := `int main() {
-		int x = 10;
+		int x = 20;
 
 		x += 10;
 		x -= 5;
 		x *= 2;
-		x /= 3;
+		x /= 2;
 
 		return x;
 	}`
@@ -33,5 +33,5 @@ func TestWASMInplaceOperatorReturn(t *testing.T) {
 	err = module.Save("temp/integer_return.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 10, ExpectedOutputI32)
+	AssertWASMBinary(t, "temp/integer_return.wasm", "main", 25, ExpectedOutputI32)
 }
