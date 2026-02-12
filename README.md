@@ -36,7 +36,7 @@ You can use the `-o` flag to change where the output binary will be.
 - [ ] Unsigned Integer/Long variables, arthimetic, and variable modification
 - [ ] If/Else-If/Else Statements
 - [ ] For/While loops
-- [ ] Functions
+- [x] Functions
 - [x] Basic Preprocessor (include, define, ifdef, ifndef)
 - [ ] Advanced Preprocessor (macros, full if statements, etc.)
 - [ ] Dynamic Memory (malloc/free)
