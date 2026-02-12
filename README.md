@@ -9,7 +9,7 @@
 webc is a compiler for C99 that outputs WASM and a JS runtime for both servers and browsers. The goal of webc is to create a runtime similar to native C that can be run either
 in the browser or on the server (with Node.js, Bun etc.) with features such as a virtual filesystem, C style error handling (errno), and support for signals from JavaScript.
 
-Currently in active development
+**Warning ⚠️:** webc is in early alpha so there may be bugs, vulnerabilities, and missing functionality. Use at your own risk
 
 ## Installation
 The only requirements for webc is having Go installed on your system, other than that you can install it with:
