@@ -130,7 +130,13 @@ func (l *Lexer) NextToken() Token {
 
 	switch l.ch {
 	case '=':
-		tok = newToken(TokenEqual, string(l.ch), l.lineCount)
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TokenEqualEqual, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TokenEqual, string(l.ch), l.lineCount)
+		}
 	case ';':
 		tok = newToken(TokenSemicolon, string(l.ch), l.lineCount)
 	case '(':
@@ -143,6 +149,30 @@ func (l *Lexer) NextToken() Token {
 		tok = newToken(TokenRBrace, string(l.ch), l.lineCount)
 	case ',':
 		tok = newToken(TokenComma, string(l.ch), l.lineCount)
+	case '!':
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TokenNotEqual, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TokenBang, string(l.ch), l.lineCount)
+		}
+	case '<':
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TokenLessOrEqual, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TokenLessThan, string(l.ch), l.lineCount)
+		}
+	case '>':
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TokenGreaterOrEqual, string(ch)+string(l.ch), l.lineCount)
+		} else {
+			tok = newToken(TokenGreaterThan, string(l.ch), l.lineCount)
+		}
 	case '+':
 		if l.peekChar() == '=' {
 			ch := l.ch
