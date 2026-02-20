@@ -21,10 +21,16 @@ const (
 )
 
 var precedenceLookup = map[lexer.TokenType]int{
-	lexer.TokenPlus:  PrecedenceSum,
-	lexer.TokenDash:  PrecedenceSum,
-	lexer.TokenStar:  PrecedenceProduct,
-	lexer.TokenSlash: PrecedenceProduct,
+	lexer.TokenPlus:           PrecedenceSum,
+	lexer.TokenDash:           PrecedenceSum,
+	lexer.TokenStar:           PrecedenceProduct,
+	lexer.TokenSlash:          PrecedenceProduct,
+	lexer.TokenGreaterOrEqual: PrecedenceLessGreater,
+	lexer.TokenLessOrEqual:    PrecedenceLessGreater,
+	lexer.TokenGreaterThan:    PrecedenceLessGreater,
+	lexer.TokenLessThan:       PrecedenceLessGreater,
+	lexer.TokenEqualEqual:     PrecedenceLessGreater,
+	lexer.TokenNotEqual:       PrecedenceLessGreater,
 }
 
 type (
@@ -77,6 +83,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.TokenFloatLiteral, p.parseFloatLiteral)
 	p.registerPrefix(lexer.TokenCharLiteral, p.parseCharLiteral)
 	p.registerPrefix(lexer.TokenDash, p.parsePrefixExpression)
+	p.registerPrefix(lexer.TokenBang, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TokenLParen, p.parseGroupedExpression)
 
 	p.infixParseFns = make(map[lexer.TokenType]infixParseFn)
@@ -84,6 +91,11 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.TokenDash, p.parseInfixExpression)
 	p.registerInfix(lexer.TokenStar, p.parseInfixExpression)
 	p.registerInfix(lexer.TokenSlash, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenLessThan, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenGreaterThan, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenGreaterOrEqual, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenLessOrEqual, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenEqualEqual, p.parseInfixExpression)
 
 	return p
 }

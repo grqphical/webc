@@ -144,6 +144,7 @@ func TestIntegerPrefixOperators(t *testing.T) {
 		integerValue int64
 	}{
 		{"-5", "-", 5},
+		{"!1", "!", 1},
 	}
 
 	for _, tt := range prefixTests {
@@ -208,6 +209,8 @@ func TestIntegerInfixOperators(t *testing.T) {
 		{"8 - 2;", 8, "-", 2},
 		{"8 * 2;", 8, "*", 2},
 		{"8 / 2;", 8, "/", 2},
+		{"8 < 2;", 8, "<", 2},
+		{"8 == 2;", 8, "==", 2},
 	}
 
 	for _, tt := range infixTests {
