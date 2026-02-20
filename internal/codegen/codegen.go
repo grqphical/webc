@@ -45,17 +45,23 @@ const (
 	OpCodeI32EqualsZero             byte = 0x45
 	OpCodeI32Eq                     byte = 0x46
 	OpCodeI32NotEq                  byte = 0x47
-	OpCodeI32LessThanSigned         byte = 0x49
+	OpCodeI32LessThanSigned         byte = 0x48
 	OpCodeI32GreaterThanSigned      byte = 0x4A
 	OpCodeI32LessThanEqualSigned    byte = 0x4C
 	OpCodeI32GreaterThanEqualSigned byte = 0x4E
 
-	OpCodeF32Const    byte = 0x43
-	OpCodeF32Neg      byte = 0x8C
-	OpCodeF32Add      byte = 0x92
-	OpCodeF32Sub      byte = 0x93
-	OpCodeF32Mul      byte = 0x94
-	OpCodeF32Division byte = 0x95
+	OpCodeF32Const            byte = 0x43
+	OpCodeF32Neg              byte = 0x8C
+	OpCodeF32Add              byte = 0x92
+	OpCodeF32Sub              byte = 0x93
+	OpCodeF32Mul              byte = 0x94
+	OpCodeF32Division         byte = 0x95
+	OpCodeF32Eq               byte = 0x5B
+	OpCodeF32NotEq            byte = 0x5C
+	OpCodeF32LessThan         byte = 0x5D
+	OpCodeF32GreaterThan      byte = 0x5E
+	OpCodeF32LessThanEqual    byte = 0x5F
+	OpCodeF32GreaterThanEqual byte = 0x60
 )
 
 // EncodeF32 converts a float32 to its 4-byte little-endian representation
@@ -324,10 +330,8 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 				funcBody.WriteByte(OpCodeF32Neg)
 			}
 		case "!":
-			if e.Right.ValueType() == ast.ValueTypeInt || e.Right.ValueType() == ast.ValueTypeChar {
-				m.generateExpressionCode(e.Right, funcBody)
-				funcBody.WriteByte(OpCodeI32EqualsZero)
-			}
+			m.generateExpressionCode(e.Right, funcBody)
+			funcBody.WriteByte(OpCodeI32EqualsZero)
 		default:
 			return errors.ErrUnsupported
 		}
@@ -368,27 +372,44 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		case "==":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32Eq)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Eq)
 			}
 		case "<=":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32GreaterThanEqualSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32GreaterThanEqual)
 			}
+
 		case ">=":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32LessThanEqualSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32LessThanEqual)
 			}
+
 		case "!=":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32NotEq)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32NotEq)
 			}
+
 		case ">":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32GreaterThanSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32GreaterThan)
 			}
+
 		case "<":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32LessThanSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32LessThan)
 			}
+
 		}
 
 		if e.Left.ValueType() == ast.ValueTypeChar {

@@ -25,6 +25,7 @@ var precedenceLookup = map[lexer.TokenType]int{
 	lexer.TokenDash:           PrecedenceSum,
 	lexer.TokenStar:           PrecedenceProduct,
 	lexer.TokenSlash:          PrecedenceProduct,
+	lexer.TokenBang:           PrecedenceLessGreater,
 	lexer.TokenGreaterOrEqual: PrecedenceLessGreater,
 	lexer.TokenLessOrEqual:    PrecedenceLessGreater,
 	lexer.TokenGreaterThan:    PrecedenceLessGreater,
