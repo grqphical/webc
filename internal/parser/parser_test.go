@@ -428,3 +428,30 @@ func TestFunctionCall(t *testing.T) {
 	assert.Equal(t, "1", exp.Args[0].TokenLiteral())
 	assert.Equal(t, "1.5", exp.Args[1].TokenLiteral())
 }
+
+func TestIfStatement(t *testing.T) {
+	input := `if (1 < 2) {
+		int x = 5;
+	}`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equalf(t, 1, len(program.Statements), "expected one statement in program, got %d", len(program.Statements))
+
+	stmt, ok := program.Statements[0].(*ast.IfStatement)
+	assert.Truef(t, ok, "could not convert type to IfStatement, got %T instead", stmt)
+
+	exp, ok := stmt.Condition.(*ast.InfixExpression)
+	assert.Truef(t, ok, "could not convert expression to InfixExpression, got %T insttead", exp)
+	assert.Equal(t, "1", exp.Left.TokenLiteral())
+	assert.Equal(t, "<", exp.Operator)
+	assert.Equal(t, "2", exp.Right.TokenLiteral())
+
+	assert.Equal(t, 1, len(stmt.Statements))
+	_, ok = stmt.Statements[0].(*ast.VariableDefineStatement)
+	assert.Truef(t, ok, "could not convert type to VariableDefineStatement, got %T instead", stmt)
+}

@@ -261,6 +261,26 @@ func (rs *ReturnStatement) ValueType() ValueType {
 	return rs.ReturnValue.ValueType()
 }
 
+type IfStatement struct {
+	Token      lexer.Token
+	Condition  Expression
+	Statements []Statement
+}
+
+func (i *IfStatement) statementNode() {}
+func (i *IfStatement) TokenLiteral() string {
+	return i.Token.Literal
+}
+func (i *IfStatement) String() string {
+	if i.Condition != nil {
+		return "if (" + i.Condition.String() + ");"
+	}
+	return ""
+}
+func (i *IfStatement) ValueType() ValueType {
+	return i.Condition.ValueType()
+}
+
 type ExpressionStatement struct {
 	Token      lexer.Token
 	Expression Expression

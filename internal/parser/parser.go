@@ -182,6 +182,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseVariableUpdateStatement()
 	case lexer.TokenReturn:
 		return p.parseReturnStatement()
+	case lexer.TokenIf:
+		return p.parseIfStatement()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -283,6 +285,45 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 	}
 
 	return stmt
+}
+
+func (p *Parser) parseIfStatement() ast.Statement {
+	ifStmt := &ast.IfStatement{Token: p.curToken}
+
+	if !p.expectPeek(lexer.TokenLParen) {
+		return nil
+	}
+	p.nextToken()
+
+	exp := p.parseExpression(PrecendenceLowest)
+	ifStmt.Condition = exp
+
+	if !p.expectPeek(lexer.TokenRParen) {
+		return nil
+	}
+	if !p.expectPeek(lexer.TokenLBrace) {
+		return nil
+	}
+	p.nextToken()
+
+	for p.curToken.Type != lexer.TokenRBrace {
+		if p.curToken.Type == lexer.TokenEndOfFile {
+			p.errors = append(p.errors, ParseError{
+				message: "expected }, got EOF instead",
+				line:    p.curToken.Line,
+			})
+			return nil
+		}
+
+		stmt := p.parseStatement()
+		if stmt != nil {
+			ifStmt.Statements = append(ifStmt.Statements, stmt)
+		}
+		p.nextToken()
+	}
+
+	return ifStmt
+
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
