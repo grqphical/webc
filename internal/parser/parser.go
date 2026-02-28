@@ -322,8 +322,36 @@ func (p *Parser) parseIfStatement() ast.Statement {
 		p.nextToken()
 	}
 
-	return ifStmt
+	if !p.peekTokenIs(lexer.TokenElse) {
+		return ifStmt
+	}
+	p.nextToken()
 
+	elseStmt := &ast.ElseStatement{
+		Token: p.curToken,
+	}
+	if !p.expectPeek(lexer.TokenLBrace) {
+		return nil
+	}
+	p.nextToken()
+	for p.curToken.Type != lexer.TokenRBrace {
+		if p.curToken.Type == lexer.TokenEndOfFile {
+			p.errors = append(p.errors, ParseError{
+				message: "expected }, got EOF instead",
+				line:    p.curToken.Line,
+			})
+			return nil
+		}
+
+		stmt := p.parseStatement()
+		if stmt != nil {
+			elseStmt.Statements = append(elseStmt.Statements, stmt)
+		}
+		p.nextToken()
+	}
+
+	ifStmt.Else = elseStmt
+	return ifStmt
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
@@ -583,6 +611,7 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 
 	return function
 }
+
 func (p *Parser) isTypeKeyword(t lexer.TokenType) bool {
 	return t == lexer.TokenIntKeyword ||
 		t == lexer.TokenFloatKeyword ||

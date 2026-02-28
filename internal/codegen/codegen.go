@@ -33,6 +33,7 @@ const (
 	OpCodeReturn       byte = 0x0F
 	OpCodeCallFunction byte = 0x10
 	OpCodeIf           byte = 0x04
+	OpCodeElse         byte = 0x05
 
 	OpCodeLocalGet byte = 0x20
 	OpCodeLocalSet byte = 0x21
@@ -155,7 +156,6 @@ func (m *WASMModule) generateImportSection() {
 	}
 
 	m.writeSection(SecImports, importPayload.Bytes())
-
 }
 
 func (m *WASMModule) generateTypeSection() {
@@ -454,6 +454,12 @@ func (m *WASMModule) generateIfStatement(stmt *ast.IfStatement, funcBody *bytes.
 	for _, s := range stmt.Statements {
 		m.generateStatement(s, funcBody)
 	}
+	if stmt.Else != nil {
+		funcBody.WriteByte(OpCodeElse)
+		for _, s := range stmt.Else.Statements {
+			m.generateStatement(s, funcBody)
+		}
+	}
 	funcBody.WriteByte(OpCodeEnd)
 	return nil
 }
@@ -539,5 +545,5 @@ func (m *WASMModule) Generate() error {
 }
 
 func (m *WASMModule) Save(filename string) error {
-	return os.WriteFile(filename, m.buffer.Bytes(), 0644)
+	return os.WriteFile(filename, m.buffer.Bytes(), 0o644)
 }

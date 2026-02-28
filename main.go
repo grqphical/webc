@@ -14,7 +14,7 @@ import (
 	"github.com/grqphical/webc/internal/preprocessor"
 )
 
-const version string = "v0.2.0-alpha"
+const version string = "v0.3.1-alpha"
 
 //go:embed templates/*
 var templateFS embed.FS
@@ -78,7 +78,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
-		err = os.WriteFile(filepath.Join(outputDir, "index.html"), htmlTemplate, 0644)
+		err = os.WriteFile(filepath.Join(outputDir, "index.html"), htmlTemplate, 0o644)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -90,7 +90,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0644)
+		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0o644)
 		defer jsFile.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -107,7 +107,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0644)
+		jsFile, err := os.OpenFile(filepath.Join(outputDir, "index.js"), os.O_RDWR|os.O_CREATE, 0o644)
 		defer jsFile.Close()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -119,5 +119,4 @@ func main() {
 		})
 
 	}
-
 }

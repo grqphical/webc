@@ -172,9 +172,11 @@ func (i *Identifier) expressionNode() {}
 func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
 }
+
 func (i *Identifier) String() string {
 	return i.Value
 }
+
 func (i *Identifier) ValueType() ValueType {
 	return i.Symbol.Type
 }
@@ -190,6 +192,7 @@ func (vds *VariableDefineStatement) statementNode() {}
 func (vds *VariableDefineStatement) TokenLiteral() string {
 	return vds.Token.Literal
 }
+
 func (vds *VariableDefineStatement) String() string {
 	var out bytes.Buffer
 
@@ -205,6 +208,7 @@ func (vds *VariableDefineStatement) String() string {
 
 	return out.String()
 }
+
 func (vds *VariableDefineStatement) ValueType() ValueType {
 	return vds.Type
 }
@@ -220,6 +224,7 @@ func (vus *VariableUpdateStatement) statementNode() {}
 func (vus *VariableUpdateStatement) TokenLiteral() string {
 	return vus.Token.Literal
 }
+
 func (vus *VariableUpdateStatement) String() string {
 	var out bytes.Buffer
 
@@ -231,6 +236,7 @@ func (vus *VariableUpdateStatement) String() string {
 
 	return out.String()
 }
+
 func (vus *VariableUpdateStatement) ValueType() ValueType {
 	return vus.Name.Symbol.Type
 }
@@ -244,6 +250,7 @@ func (rs *ReturnStatement) statementNode() {}
 func (rs *ReturnStatement) TokenLiteral() string {
 	return rs.Token.Literal
 }
+
 func (rs *ReturnStatement) String() string {
 	var out bytes.Buffer
 
@@ -257,6 +264,7 @@ func (rs *ReturnStatement) String() string {
 
 	return out.String()
 }
+
 func (rs *ReturnStatement) ValueType() ValueType {
 	return rs.ReturnValue.ValueType()
 }
@@ -265,20 +273,41 @@ type IfStatement struct {
 	Token      lexer.Token
 	Condition  Expression
 	Statements []Statement
+	Else       *ElseStatement
 }
 
 func (i *IfStatement) statementNode() {}
 func (i *IfStatement) TokenLiteral() string {
 	return i.Token.Literal
 }
+
 func (i *IfStatement) String() string {
 	if i.Condition != nil {
 		return "if (" + i.Condition.String() + ");"
 	}
 	return ""
 }
+
 func (i *IfStatement) ValueType() ValueType {
 	return i.Condition.ValueType()
+}
+
+type ElseStatement struct {
+	Token      lexer.Token
+	Statements []Statement
+}
+
+func (e *ElseStatement) statementNode() {}
+func (e *ElseStatement) TokenLiteral() string {
+	return e.Token.Literal
+}
+
+func (e *ElseStatement) String() string {
+	return e.Token.Literal
+}
+
+func (e *ElseStatement) ValueType() ValueType {
+	return ValueTypeVoid
 }
 
 type ExpressionStatement struct {
@@ -294,6 +323,7 @@ func (es *ExpressionStatement) String() string {
 	}
 	return ""
 }
+
 func (es *ExpressionStatement) ValueType() ValueType {
 	return es.Expression.ValueType()
 }
@@ -348,6 +378,7 @@ func (pe *PrefixExpression) String() string {
 
 	return out.String()
 }
+
 func (pe *PrefixExpression) ValueType() ValueType {
 	return pe.Right.ValueType()
 }
@@ -372,6 +403,7 @@ func (ie *InfixExpression) String() string {
 
 	return out.String()
 }
+
 func (ie *InfixExpression) ValueType() ValueType {
 	return ie.Left.ValueType()
 }
@@ -398,6 +430,7 @@ func (fce *FunctionCallExpression) String() string {
 
 	return out.String()
 }
+
 func (fce *FunctionCallExpression) ValueType() ValueType {
 	return fce.ReturnType
 }
