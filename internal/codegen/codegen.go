@@ -32,6 +32,7 @@ const (
 	OpCodeEnd          byte = 0x0B
 	OpCodeReturn       byte = 0x0F
 	OpCodeCallFunction byte = 0x10
+	OpCodeIf           byte = 0x04
 
 	OpCodeLocalGet byte = 0x20
 	OpCodeLocalSet byte = 0x21
@@ -446,6 +447,17 @@ func (m *WASMModule) generateReturnStatement(stmt *ast.ReturnStatement, funcBody
 	return nil
 }
 
+func (m *WASMModule) generateIfStatement(stmt *ast.IfStatement, funcBody *bytes.Buffer) error {
+	m.generateExpressionCode(stmt.Condition, funcBody)
+	funcBody.WriteByte(OpCodeIf)
+	funcBody.WriteByte(0x40) // no return type
+	for _, s := range stmt.Statements {
+		m.generateStatement(s, funcBody)
+	}
+	funcBody.WriteByte(OpCodeEnd)
+	return nil
+}
+
 func (m *WASMModule) generateVariableUpdate(stmt *ast.VariableUpdateStatement, funcBody *bytes.Buffer) error {
 	switch stmt.Operation {
 	case "=":
@@ -511,6 +523,8 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 		return m.generateVariableUpdate(s, funcBody)
 	case *ast.ExpressionStatement:
 		return m.generateExpressionCode(s.Expression, funcBody)
+	case *ast.IfStatement:
+		return m.generateIfStatement(s, funcBody)
 	default:
 		return fmt.Errorf("unknown statement type '%s'", s.String())
 	}
