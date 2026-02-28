@@ -32,23 +32,37 @@ const (
 	OpCodeEnd          byte = 0x0B
 	OpCodeReturn       byte = 0x0F
 	OpCodeCallFunction byte = 0x10
+	OpCodeIf           byte = 0x04
 
 	OpCodeLocalGet byte = 0x20
 	OpCodeLocalSet byte = 0x21
 
-	OpCodeI32Const          byte = 0x41
-	OpCodeI32Add            byte = 0x6A
-	OpCodeI32Sub            byte = 0x6B
-	OpCodeI32Mul            byte = 0x6C
-	OpCodeI32SignedDivision byte = 0x6D
-	OpCodeI32And            byte = 0x71
+	OpCodeI32Const                  byte = 0x41
+	OpCodeI32Add                    byte = 0x6A
+	OpCodeI32Sub                    byte = 0x6B
+	OpCodeI32Mul                    byte = 0x6C
+	OpCodeI32SignedDivision         byte = 0x6D
+	OpCodeI32And                    byte = 0x71
+	OpCodeI32EqualsZero             byte = 0x45
+	OpCodeI32Eq                     byte = 0x46
+	OpCodeI32NotEq                  byte = 0x47
+	OpCodeI32LessThanSigned         byte = 0x48
+	OpCodeI32GreaterThanSigned      byte = 0x4A
+	OpCodeI32LessThanEqualSigned    byte = 0x4C
+	OpCodeI32GreaterThanEqualSigned byte = 0x4E
 
-	OpCodeF32Const    byte = 0x43
-	OpCodeF32Neg      byte = 0x8C
-	OpCodeF32Add      byte = 0x92
-	OpCodeF32Sub      byte = 0x93
-	OpCodeF32Mul      byte = 0x94
-	OpCodeF32Division byte = 0x95
+	OpCodeF32Const            byte = 0x43
+	OpCodeF32Neg              byte = 0x8C
+	OpCodeF32Add              byte = 0x92
+	OpCodeF32Sub              byte = 0x93
+	OpCodeF32Mul              byte = 0x94
+	OpCodeF32Division         byte = 0x95
+	OpCodeF32Eq               byte = 0x5B
+	OpCodeF32NotEq            byte = 0x5C
+	OpCodeF32LessThan         byte = 0x5D
+	OpCodeF32GreaterThan      byte = 0x5E
+	OpCodeF32LessThanEqual    byte = 0x5F
+	OpCodeF32GreaterThanEqual byte = 0x60
 )
 
 // EncodeF32 converts a float32 to its 4-byte little-endian representation
@@ -316,6 +330,9 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 				m.generateExpressionCode(e.Right, funcBody)
 				funcBody.WriteByte(OpCodeF32Neg)
 			}
+		case "!":
+			m.generateExpressionCode(e.Right, funcBody)
+			funcBody.WriteByte(OpCodeI32EqualsZero)
 		default:
 			return errors.ErrUnsupported
 		}
@@ -352,6 +369,48 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Division)
 			}
+		// since we push the left side first, we need to use the opposite logical operation (i.e. use less than when greater than sign is used)
+		case "==":
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32Eq)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Eq)
+			}
+		case "<=":
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32GreaterThanEqualSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32GreaterThanEqual)
+			}
+
+		case ">=":
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32LessThanEqualSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32LessThanEqual)
+			}
+
+		case "!=":
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32NotEq)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32NotEq)
+			}
+
+		case ">":
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32GreaterThanSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32GreaterThan)
+			}
+
+		case "<":
+			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32LessThanSigned)
+			} else if e.Left.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32LessThan)
+			}
+
 		}
 
 		if e.Left.ValueType() == ast.ValueTypeChar {
@@ -385,6 +444,17 @@ func (m *WASMModule) generateVariableDefinition(stmt *ast.VariableDefineStatemen
 
 func (m *WASMModule) generateReturnStatement(stmt *ast.ReturnStatement, funcBody *bytes.Buffer) error {
 	m.generateExpressionCode(stmt.ReturnValue, funcBody)
+	return nil
+}
+
+func (m *WASMModule) generateIfStatement(stmt *ast.IfStatement, funcBody *bytes.Buffer) error {
+	m.generateExpressionCode(stmt.Condition, funcBody)
+	funcBody.WriteByte(OpCodeIf)
+	funcBody.WriteByte(0x40) // no return type
+	for _, s := range stmt.Statements {
+		m.generateStatement(s, funcBody)
+	}
+	funcBody.WriteByte(OpCodeEnd)
 	return nil
 }
 
@@ -453,6 +523,8 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 		return m.generateVariableUpdate(s, funcBody)
 	case *ast.ExpressionStatement:
 		return m.generateExpressionCode(s.Expression, funcBody)
+	case *ast.IfStatement:
+		return m.generateIfStatement(s, funcBody)
 	default:
 		return fmt.Errorf("unknown statement type '%s'", s.String())
 	}

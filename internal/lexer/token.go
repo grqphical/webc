@@ -17,16 +17,23 @@ const (
 	TokenSemicolon TokenType = ";"
 	TokenComma     TokenType = ","
 
-	TokenEqual TokenType = "="
-	TokenDash  TokenType = "-"
-	TokenPlus  TokenType = "+"
-	TokenStar  TokenType = "*"
-	TokenSlash TokenType = "/"
+	TokenEqual       TokenType = "="
+	TokenDash        TokenType = "-"
+	TokenPlus        TokenType = "+"
+	TokenStar        TokenType = "*"
+	TokenSlash       TokenType = "/"
+	TokenLessThan    TokenType = "<"
+	TokenGreaterThan TokenType = ">"
+	TokenBang        TokenType = "!"
 
-	TokenPlusEqual   TokenType = "+="
-	TokenMinusEqual  TokenType = "-="
-	TokenTimesEqual  TokenType = "*="
-	TokenDivideEqual TokenType = "/="
+	TokenPlusEqual      TokenType = "+="
+	TokenMinusEqual     TokenType = "-="
+	TokenTimesEqual     TokenType = "*="
+	TokenDivideEqual    TokenType = "/="
+	TokenNotEqual       TokenType = "!="
+	TokenLessOrEqual    TokenType = "<="
+	TokenGreaterOrEqual TokenType = ">="
+	TokenEqualEqual     TokenType = "=="
 
 	TokenIntKeyword   TokenType = "int"
 	TokenFloatKeyword TokenType = "float"
@@ -35,6 +42,7 @@ const (
 	TokenConst        TokenType = "const"
 	TokenExtern       TokenType = "extern"
 	TokenVoid         TokenType = "void"
+	TokenIf           TokenType = "if"
 
 	TokenEndOfFile TokenType = "EOF"
 	TokenIllegal   TokenType = "ILLEGAL"
@@ -48,6 +56,7 @@ var keywords = map[string]TokenType{
 	"const":  TokenConst,
 	"extern": TokenExtern,
 	"void":   TokenVoid,
+	"if":     TokenIf,
 }
 
 func lookupIdent(ident string) TokenType {

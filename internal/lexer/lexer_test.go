@@ -8,7 +8,7 @@ import (
 )
 
 func TestSingleTokens(t *testing.T) {
-	input := `=+(){};`
+	input := `=+(){};<>!`
 	tests := []struct {
 		expectedType    lexer.TokenType
 		expectedLiteral string
@@ -20,6 +20,9 @@ func TestSingleTokens(t *testing.T) {
 		{lexer.TokenLBrace, "{"},
 		{lexer.TokenRBrace, "}"},
 		{lexer.TokenSemicolon, ";"},
+		{lexer.TokenLessThan, "<"},
+		{lexer.TokenGreaterThan, ">"},
+		{lexer.TokenBang, "!"},
 		{lexer.TokenEndOfFile, ""},
 	}
 	l := lexer.New(input)
@@ -86,6 +89,9 @@ func TestTwoCharTokens(t *testing.T) {
 	input := `int main() {
 		int x = 10;
 		x += 10;
+		
+		<=
+		==
 
 		return x;
 	}`
@@ -107,6 +113,8 @@ func TestTwoCharTokens(t *testing.T) {
 		{lexer.TokenPlusEqual, "+="},
 		{lexer.TokenIntLiteral, "10"},
 		{lexer.TokenSemicolon, ";"},
+		{lexer.TokenLessOrEqual, "<="},
+		{lexer.TokenEqualEqual, "=="},
 		{lexer.TokenReturn, "return"},
 		{lexer.TokenIdent, "x"},
 		{lexer.TokenSemicolon, ";"},
