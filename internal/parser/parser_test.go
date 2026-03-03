@@ -489,3 +489,42 @@ func TestIfElseStatement(t *testing.T) {
 	_, ok = stmt.Alternative.(*ast.BlockStatement)
 	assert.Truef(t, ok, "could not convert type to BlockStatement, got %T instead", stmt)
 }
+
+func TestIfElseIfStatement(t *testing.T) {
+	input := `if (1 < 2) {
+		int x = 5;
+	} else if (2 < 1) {
+		int x = 4;
+	}`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equalf(t, 1, len(program.Statements), "expected one statement in program, got %d", len(program.Statements))
+
+	stmt, ok := program.Statements[0].(*ast.IfStatement)
+	assert.Truef(t, ok, "could not convert type to IfStatement, got %T instead", stmt)
+
+	exp, ok := stmt.Condition.(*ast.InfixExpression)
+	assert.Truef(t, ok, "could not convert expression to InfixExpression, got %T insttead", exp)
+	assert.Equal(t, "1", exp.Left.TokenLiteral())
+	assert.Equal(t, "<", exp.Operator)
+	assert.Equal(t, "2", exp.Right.TokenLiteral())
+
+	assert.NotNil(t, stmt.Consequence)
+	_, ok = stmt.Consequence.(*ast.BlockStatement)
+	assert.Truef(t, ok, "could not convert type to BlockStatement, got %T instead", stmt)
+
+	assert.NotNil(t, stmt.Alternative)
+	altStmt, ok := stmt.Alternative.(*ast.IfStatement)
+	assert.Truef(t, ok, "could not convert type to BlockStatement, got %T instead", stmt)
+
+	exp, ok = altStmt.Condition.(*ast.InfixExpression)
+	assert.Truef(t, ok, "could not convert expression to InfixExpression, got %T insttead", exp)
+	assert.Equal(t, "2", exp.Left.TokenLiteral())
+	assert.Equal(t, "<", exp.Operator)
+	assert.Equal(t, "1", exp.Right.TokenLiteral())
+}
