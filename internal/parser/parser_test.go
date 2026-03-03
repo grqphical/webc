@@ -327,13 +327,14 @@ func TestFunctionDeclarations(t *testing.T) {
 
 	assert.Equal(t, 1, len(program.Functions), "didnt get one function declaration")
 	assert.Equal(t, "main", program.Functions[0].Name)
-	assert.Equal(t, 1, len(program.Functions[0].Statements), "did not get one statement")
+	assert.NotNil(t, program.Functions[0].Statement)
 
-	stmt, ok := program.Functions[0].Statements[0].(*ast.VariableDefineStatement)
-	assert.True(t, ok, "cannot cast statement to VariableDefineStatement")
+	stmt, ok := program.Functions[0].Statement.(*ast.BlockStatement)
+	assert.Truef(t, ok, "cannot cast statement to BlockStatement, got %v instead", stmt)
+	assert.Equal(t, 1, len(stmt.Statements))
 
-	assert.Equal(t, "x", stmt.Name.TokenLiteral())
-	assert.Equal(t, "5", stmt.Value.TokenLiteral())
+	_, ok = stmt.Statements[0].(*ast.VariableDefineStatement)
+	assert.True(t, ok)
 }
 
 func TestVariableUpdate(t *testing.T) {
@@ -432,9 +433,7 @@ func TestFunctionCall(t *testing.T) {
 }
 
 func TestIfStatement(t *testing.T) {
-	input := `if (1 < 2) {
-		int x = 5;
-	}`
+	input := `if (1 < 2) int x = 5;`
 
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -453,8 +452,8 @@ func TestIfStatement(t *testing.T) {
 	assert.Equal(t, "<", exp.Operator)
 	assert.Equal(t, "2", exp.Right.TokenLiteral())
 
-	assert.Equal(t, 1, len(stmt.Statements))
-	_, ok = stmt.Statements[0].(*ast.VariableDefineStatement)
+	assert.NotNil(t, stmt.Consequence)
+	_, ok = stmt.Consequence.(*ast.VariableDefineStatement)
 	assert.Truef(t, ok, "could not convert type to VariableDefineStatement, got %T instead", stmt)
 }
 
@@ -482,13 +481,11 @@ func TestIfElseStatement(t *testing.T) {
 	assert.Equal(t, "<", exp.Operator)
 	assert.Equal(t, "2", exp.Right.TokenLiteral())
 
-	assert.Equal(t, 1, len(stmt.Statements))
-	_, ok = stmt.Statements[0].(*ast.VariableDefineStatement)
-	assert.Truef(t, ok, "could not convert type to VariableDefineStatement, got %T instead", stmt)
+	assert.NotNil(t, stmt.Consequence)
+	_, ok = stmt.Consequence.(*ast.BlockStatement)
+	assert.Truef(t, ok, "could not convert type to BlockStatement, got %T instead", stmt)
 
-	assert.NotNil(t, stmt.Else, "else statement is nil")
-
-	assert.Equal(t, 1, len(stmt.Else.Statements))
-	_, ok = stmt.Statements[0].(*ast.VariableDefineStatement)
-	assert.Truef(t, ok, "could not convert type to VariableDefineStatement, got %T instead", stmt)
+	assert.NotNil(t, stmt.Alternative)
+	_, ok = stmt.Alternative.(*ast.BlockStatement)
+	assert.Truef(t, ok, "could not convert type to BlockStatement, got %T instead", stmt)
 }
