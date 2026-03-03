@@ -84,7 +84,7 @@ type Argument struct {
 type Function struct {
 	Name            string
 	ReturnType      ValueType
-	Statements      []Statement
+	Statement       Statement
 	SymbolIndex     map[string]int
 	Symbols         []*Symbol
 	NextSymbolIndex int
@@ -95,7 +95,7 @@ func NewFunction(name string, returnType ValueType) *Function {
 	return &Function{
 		Name:            name,
 		ReturnType:      returnType,
-		Statements:      make([]Statement, 0),
+		Statement:       nil,
 		Symbols:         make([]*Symbol, 0),
 		SymbolIndex:     make(map[string]int),
 		NextSymbolIndex: 0,
@@ -103,19 +103,17 @@ func NewFunction(name string, returnType ValueType) *Function {
 }
 
 func (f *Function) TokenLiteral() string {
-	if len(f.Statements) > 0 {
-		return f.Statements[0].TokenLiteral()
-	} else {
-		return ""
+	if f.Statement != nil {
+		return f.Statement.TokenLiteral()
 	}
+	return ""
 }
 
 func (f *Function) String() string {
-	var out bytes.Buffer
-	for _, s := range f.Statements {
-		out.WriteString(s.String())
+	if f.Statement != nil {
+		return f.Statement.String()
 	}
-	return out.String()
+	return ""
 }
 
 func (f *Function) ValueType() ValueType {
@@ -180,6 +178,22 @@ func (i *Identifier) String() string {
 func (i *Identifier) ValueType() ValueType {
 	return i.Symbol.Type
 }
+
+type BlockStatement struct {
+	Token      lexer.Token
+	Statements []Statement
+}
+
+func (bs *BlockStatement) statementNode()       {}
+func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
+func (bs *BlockStatement) String() string {
+	var out bytes.Buffer
+	for _, s := range bs.Statements {
+		out.WriteString(s.String())
+	}
+	return out.String()
+}
+func (bs *BlockStatement) ValueType() ValueType { return ValueTypeVoid }
 
 type VariableDefineStatement struct {
 	Token lexer.Token
@@ -270,10 +284,10 @@ func (rs *ReturnStatement) ValueType() ValueType {
 }
 
 type IfStatement struct {
-	Token      lexer.Token
-	Condition  Expression
-	Statements []Statement
-	Else       *ElseStatement
+	Token       lexer.Token
+	Condition   Expression
+	Consequence Statement
+	Alternative Statement
 }
 
 func (i *IfStatement) statementNode() {}
@@ -290,24 +304,6 @@ func (i *IfStatement) String() string {
 
 func (i *IfStatement) ValueType() ValueType {
 	return i.Condition.ValueType()
-}
-
-type ElseStatement struct {
-	Token      lexer.Token
-	Statements []Statement
-}
-
-func (e *ElseStatement) statementNode() {}
-func (e *ElseStatement) TokenLiteral() string {
-	return e.Token.Literal
-}
-
-func (e *ElseStatement) String() string {
-	return e.Token.Literal
-}
-
-func (e *ElseStatement) ValueType() ValueType {
-	return ValueTypeVoid
 }
 
 type ExpressionStatement struct {
