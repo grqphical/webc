@@ -178,6 +178,8 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword, lexer.TokenConst:
 		return p.parseVariableDefineStatement()
+	case lexer.TokenLBrace:
+		return p.parseBlock()
 	case lexer.TokenIdent:
 		return p.parseVariableUpdateStatement()
 	case lexer.TokenReturn:
@@ -187,6 +189,32 @@ func (p *Parser) parseStatement() ast.Statement {
 	default:
 		return p.parseExpressionStatement()
 	}
+}
+
+func (p *Parser) parseBlock() ast.Statement {
+	block := &ast.BlockStatement{
+		Token: p.curToken,
+	}
+	p.nextToken()
+
+	for p.curToken.Type != lexer.TokenRBrace {
+		if p.curToken.Type == lexer.TokenEndOfFile {
+			p.errors = append(p.errors, ParseError{
+				message: "expected }, got EOF instead",
+				line:    p.curToken.Line,
+			})
+			return nil
+		}
+
+		stmt := p.parseStatement()
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		}
+
+		p.nextToken()
+	}
+
+	return block
 }
 
 func (p *Parser) parseVariableUpdateStatement() ast.Statement {
@@ -301,56 +329,22 @@ func (p *Parser) parseIfStatement() ast.Statement {
 	if !p.expectPeek(lexer.TokenRParen) {
 		return nil
 	}
-	if !p.expectPeek(lexer.TokenLBrace) {
-		return nil
-	}
+
 	p.nextToken()
+	ifStmt.Consequence = p.parseStatement()
 
-	for p.curToken.Type != lexer.TokenRBrace {
-		if p.curToken.Type == lexer.TokenEndOfFile {
-			p.errors = append(p.errors, ParseError{
-				message: "expected }, got EOF instead",
-				line:    p.curToken.Line,
-			})
-			return nil
-		}
-
-		stmt := p.parseStatement()
-		if stmt != nil {
-			ifStmt.Statements = append(ifStmt.Statements, stmt)
-		}
+	if p.peekTokenIs(lexer.TokenElse) {
 		p.nextToken()
-	}
 
-	if !p.peekTokenIs(lexer.TokenElse) {
-		return ifStmt
-	}
-	p.nextToken()
+		if p.peekTokenIs(lexer.TokenIf) {
+			p.nextToken()
+			ifStmt.Alternative = p.parseIfStatement()
 
-	elseStmt := &ast.ElseStatement{
-		Token: p.curToken,
-	}
-	if !p.expectPeek(lexer.TokenLBrace) {
-		return nil
-	}
-	p.nextToken()
-	for p.curToken.Type != lexer.TokenRBrace {
-		if p.curToken.Type == lexer.TokenEndOfFile {
-			p.errors = append(p.errors, ParseError{
-				message: "expected }, got EOF instead",
-				line:    p.curToken.Line,
-			})
-			return nil
+		} else {
+			p.nextToken()
+			ifStmt.Alternative = p.parseStatement()
 		}
-
-		stmt := p.parseStatement()
-		if stmt != nil {
-			elseStmt.Statements = append(elseStmt.Statements, stmt)
-		}
-		p.nextToken()
 	}
-
-	ifStmt.Else = elseStmt
 	return ifStmt
 }
 
@@ -528,7 +522,6 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 	p.nextToken()
 	name := p.curToken.Literal
 	function := ast.NewFunction(name, ast.ValueType(t))
-	function.Statements = make([]ast.Statement, 0)
 	p.curFunction = function
 
 	if !p.expectPeek(lexer.TokenLParen) {
@@ -586,27 +579,8 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 	}
 
 	if !extern {
-		// skip '{'
-		if !p.expectPeek(lexer.TokenLBrace) {
-			return nil
-		}
 		p.nextToken()
-
-		for p.curToken.Type != lexer.TokenRBrace {
-			if p.curToken.Type == lexer.TokenEndOfFile {
-				p.errors = append(p.errors, ParseError{
-					message: "expected }, got EOF instead",
-					line:    p.curToken.Line,
-				})
-				return nil
-			}
-
-			stmt := p.parseStatement()
-			if stmt != nil {
-				function.Statements = append(function.Statements, stmt)
-			}
-			p.nextToken()
-		}
+		function.Statement = p.parseStatement()
 	}
 
 	return function
@@ -654,7 +628,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 						p.program.Functions = append(p.program.Functions, function)
 					} else {
 						// handle functions that have been defined without bodies (in header files for example)
-						p.program.Functions[idx].Statements = function.Statements
+						p.program.Functions[idx].Statement = function.Statement
 					}
 				}
 			}
