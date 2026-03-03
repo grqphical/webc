@@ -37,7 +37,7 @@ You can use the `-o` flag to change where the output binary will be.
 - [ ] Unsigned Integer/Long variables, arthimetic, and variable modification
 - [x] If Statements
 - [x] Else Statements
-- [ ] Else If Statements
+- [x] Else If Statements
 - [ ] For Loops
 - [ ] While loops
 - [x] Functions

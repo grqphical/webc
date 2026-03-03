@@ -14,7 +14,7 @@ import (
 	"github.com/grqphical/webc/internal/preprocessor"
 )
 
-const version string = "v0.3.1-alpha"
+const version string = "v0.3.2-alpha"
 
 //go:embed templates/*
 var templateFS embed.FS
