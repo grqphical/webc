@@ -273,10 +273,8 @@ func (m *WASMModule) generateCodeSection() error {
 		}
 
 		// --- Instructions ---
-		for _, stmt := range function.Statements {
-			if err := m.generateStatement(stmt, &funcBody); err != nil {
-				return err
-			}
+		if err := m.generateStatement(function.Statement, &funcBody); err != nil {
+			return err
 		}
 
 		funcBody.WriteByte(OpCodeEnd)
@@ -451,14 +449,10 @@ func (m *WASMModule) generateIfStatement(stmt *ast.IfStatement, funcBody *bytes.
 	m.generateExpressionCode(stmt.Condition, funcBody)
 	funcBody.WriteByte(OpCodeIf)
 	funcBody.WriteByte(0x40) // no return type
-	for _, s := range stmt.Statements {
-		m.generateStatement(s, funcBody)
-	}
-	if stmt.Else != nil {
+	m.generateStatement(stmt.Consequence, funcBody)
+	if stmt.Alternative != nil {
 		funcBody.WriteByte(OpCodeElse)
-		for _, s := range stmt.Else.Statements {
-			m.generateStatement(s, funcBody)
-		}
+		m.generateStatement(stmt.Alternative, funcBody)
 	}
 	funcBody.WriteByte(OpCodeEnd)
 	return nil
@@ -531,6 +525,13 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 		return m.generateExpressionCode(s.Expression, funcBody)
 	case *ast.IfStatement:
 		return m.generateIfStatement(s, funcBody)
+	case *ast.BlockStatement:
+		for _, blockStmt := range s.Statements {
+			if err := m.generateStatement(blockStmt, funcBody); err != nil {
+				return err
+			}
+		}
+		return nil
 	default:
 		return fmt.Errorf("unknown statement type '%s'", s.String())
 	}
