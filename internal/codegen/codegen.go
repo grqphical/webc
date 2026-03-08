@@ -35,8 +35,11 @@ const (
 	OpCodeIf           byte = 0x04
 	OpCodeElse         byte = 0x05
 
+	OpCodeDrop byte = 0x1A
+
 	OpCodeLocalGet byte = 0x20
 	OpCodeLocalSet byte = 0x21
+	OpCodeLocalTee byte = 0x22
 
 	OpCodeI32Const                  byte = 0x41
 	OpCodeI32Add                    byte = 0x6A
@@ -317,6 +320,13 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		funcBody.WriteByte(OpCodeCallFunction)
 		funcBody.Write(EncodeULEB128(uint32(index)))
 	case *ast.PrefixExpression:
+		ident, ok := e.Right.(*ast.Identifier)
+
+		var localIndex []byte
+		if ok {
+			localIndex = EncodeULEB128(uint32(ident.Symbol.Index))
+		}
+
 		switch e.Operator {
 		case "-":
 			if e.Right.ValueType() == ast.ValueTypeInt || e.Right.ValueType() == ast.ValueTypeChar {
@@ -331,9 +341,78 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 		case "!":
 			m.generateExpressionCode(e.Right, funcBody)
 			funcBody.WriteByte(OpCodeI32EqualsZero)
+		case "++":
+			m.generateExpressionCode(e.Right, funcBody)
+			if e.Right.ValueType() == ast.ValueTypeInt || e.Right.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32Const)
+				funcBody.Write(EncodeSLEB128(1))
+				funcBody.WriteByte(OpCodeI32Add)
+			} else if e.Right.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Const)
+				funcBody.Write(EncodeF32(1.0))
+				funcBody.WriteByte(OpCodeF32Add)
+			}
+			funcBody.WriteByte(OpCodeLocalTee)
+			funcBody.Write(localIndex)
+		case "--":
+			m.generateExpressionCode(e.Right, funcBody)
+			if e.Right.ValueType() == ast.ValueTypeInt || e.Right.ValueType() == ast.ValueTypeChar {
+				funcBody.WriteByte(OpCodeI32Const)
+				funcBody.Write(EncodeSLEB128(1))
+				funcBody.WriteByte(OpCodeI32Sub)
+			} else if e.Right.ValueType() == ast.ValueTypeFloat {
+				funcBody.WriteByte(OpCodeF32Const)
+				funcBody.Write(EncodeF32(1.0))
+				funcBody.WriteByte(OpCodeF32Sub)
+			}
+			funcBody.WriteByte(OpCodeLocalTee)
+			funcBody.Write(localIndex)
 		default:
 			return errors.ErrUnsupported
 		}
+	case *ast.PostfixExpression:
+		ident, ok := e.Left.(*ast.Identifier)
+		if !ok {
+			return errors.New("postfix operators currently only support identifiers")
+		}
+
+		localIndex := EncodeULEB128(uint32(ident.Symbol.Index))
+
+		funcBody.WriteByte(OpCodeLocalGet)
+		funcBody.Write(localIndex)
+
+		funcBody.WriteByte(OpCodeLocalGet)
+		funcBody.Write(localIndex)
+
+		if ident.ValueType() == ast.ValueTypeInt || ident.ValueType() == ast.ValueTypeChar {
+			funcBody.WriteByte(OpCodeI32Const)
+			funcBody.Write(EncodeSLEB128(1))
+
+			switch e.Operator {
+			case "++":
+				funcBody.WriteByte(OpCodeI32Add)
+			case "--":
+				funcBody.WriteByte(OpCodeI32Sub)
+			default:
+				return fmt.Errorf("unknown postfix operator: %s", e.Operator)
+			}
+		} else if ident.ValueType() == ast.ValueTypeFloat {
+			funcBody.WriteByte(OpCodeF32Const)
+			funcBody.Write(EncodeF32(1.0))
+
+			switch e.Operator {
+			case "++":
+				funcBody.WriteByte(OpCodeF32Add)
+			case "--":
+				funcBody.WriteByte(OpCodeF32Sub)
+			default:
+				return fmt.Errorf("unknown postfix operator: %s", e.Operator)
+			}
+		}
+
+		// 4. Save the modified value back to the local variable
+		funcBody.WriteByte(OpCodeLocalSet)
+		funcBody.Write(localIndex)
 
 	case *ast.InfixExpression:
 		if !checkCompatibleTypes(e.Left.ValueType(), e.Right.ValueType()) {
@@ -522,7 +601,23 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 	case *ast.VariableUpdateStatement:
 		return m.generateVariableUpdate(s, funcBody)
 	case *ast.ExpressionStatement:
-		return m.generateExpressionCode(s.Expression, funcBody)
+		if err := m.generateExpressionCode(s.Expression, funcBody); err != nil {
+			return err
+		}
+		needsDrop := true
+
+		// The only exception is a function call that returns void.
+		if call, ok := s.Expression.(*ast.FunctionCallExpression); ok {
+			if call.ReturnType == ast.ValueTypeVoid {
+				needsDrop = false
+			}
+		}
+
+		if needsDrop {
+			funcBody.WriteByte(OpCodeDrop)
+		}
+
+		return nil
 	case *ast.IfStatement:
 		return m.generateIfStatement(s, funcBody)
 	case *ast.BlockStatement:

@@ -433,6 +433,15 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 }
 
 func (p *Parser) parsePostfixExpression(left ast.Expression) ast.Expression {
+	_, ok := left.(*ast.Identifier)
+	if !ok {
+		p.errors = append(p.errors, ParseError{
+			line:    p.curToken.Line,
+			message: "cannot apply postfix operator on non variable",
+		})
+		return nil
+	}
+
 	expression := &ast.PostfixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
@@ -503,6 +512,17 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	p.nextToken()
 
 	expression.Right = p.parseExpression(PrecedencePrefix)
+
+	if p.curToken.Literal == "++" || p.curToken.Literal == "--" {
+		_, ok := expression.Right.(*ast.Identifier)
+		if !ok {
+			p.errors = append(p.errors, ParseError{
+				line:    p.curToken.Line,
+				message: "cannot apply postfix operator on non variable",
+			})
+			return nil
+		}
+	}
 
 	return expression
 }
