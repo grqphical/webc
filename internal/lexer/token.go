@@ -34,6 +34,8 @@ const (
 	TokenLessOrEqual    TokenType = "<="
 	TokenGreaterOrEqual TokenType = ">="
 	TokenEqualEqual     TokenType = "=="
+	TokenIncrement      TokenType = "++"
+	TokenDecrement      TokenType = "--"
 
 	TokenIntKeyword   TokenType = "int"
 	TokenFloatKeyword TokenType = "float"

@@ -224,3 +224,24 @@ func TestLoopStatements(t *testing.T) {
 		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
 }
+
+func TestIncrementDecrement(t *testing.T) {
+	input := `++
+	--`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TokenIncrement, "++"},
+		{lexer.TokenDecrement, "--"},
+	}
+
+	l := lexer.New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
+	}
+}
