@@ -33,6 +33,7 @@ You can use the `-o` flag to change where the output binary will be.
 - [x] Floating point variables, arthimetic, and variable modification
 - [x] Character variables, arthimetic, and variable modification
 - [x] Constant variables
+- [x] ++ and -- operators
 - [ ] Long (64 bit Integer) variables, arthimetic, and variable modification
 - [ ] Unsigned Integer/Long variables, arthimetic, and variable modification
 - [x] If Statements
