@@ -18,6 +18,7 @@ const (
 	PrecedenceProduct
 	PrecedencePrefix
 	PrecedenceCall
+	PrecedencePostFix
 )
 
 var precedenceLookup = map[lexer.TokenType]int{
@@ -32,6 +33,8 @@ var precedenceLookup = map[lexer.TokenType]int{
 	lexer.TokenLessThan:       PrecedenceLessGreater,
 	lexer.TokenEqualEqual:     PrecedenceLessGreater,
 	lexer.TokenNotEqual:       PrecedenceLessGreater,
+	lexer.TokenIncrement:      PrecedencePostFix,
+	lexer.TokenDecrement:      PrecedencePostFix,
 }
 
 type (
@@ -86,6 +89,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.TokenDash, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TokenBang, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TokenLParen, p.parseGroupedExpression)
+	p.registerPrefix(lexer.TokenIncrement, p.parsePrefixExpression)
+	p.registerPrefix(lexer.TokenDecrement, p.parsePrefixExpression)
 
 	p.infixParseFns = make(map[lexer.TokenType]infixParseFn)
 	p.registerInfix(lexer.TokenPlus, p.parseInfixExpression)
@@ -97,6 +102,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.TokenGreaterOrEqual, p.parseInfixExpression)
 	p.registerInfix(lexer.TokenLessOrEqual, p.parseInfixExpression)
 	p.registerInfix(lexer.TokenEqualEqual, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenIncrement, p.parsePostfixExpression)
+	p.registerInfix(lexer.TokenDecrement, p.parsePostfixExpression)
 
 	return p
 }
@@ -423,6 +430,16 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 
 	return leftExp
+}
+
+func (p *Parser) parsePostfixExpression(left ast.Expression) ast.Expression {
+	expression := &ast.PostfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+
+	return expression
 }
 
 func (p *Parser) parseExpressionStatement() ast.Statement {

@@ -430,3 +430,23 @@ func (fce *FunctionCallExpression) String() string {
 func (fce *FunctionCallExpression) ValueType() ValueType {
 	return fce.ReturnType
 }
+
+type PostfixExpression struct {
+	Token    lexer.Token
+	Left     Expression
+	Operator string
+}
+
+func (pe *PostfixExpression) expressionNode()      {}
+func (pe *PostfixExpression) TokenLiteral() string { return pe.Token.Literal }
+func (pe *PostfixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(pe.Left.String())
+	out.WriteString(pe.Operator)
+	out.WriteString(")")
+	return out.String()
+}
+func (pe *PostfixExpression) ValueType() ValueType {
+	return pe.Left.ValueType()
+}

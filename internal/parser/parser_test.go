@@ -528,3 +528,33 @@ func TestIfElseIfStatement(t *testing.T) {
 	assert.Equal(t, "<", exp.Operator)
 	assert.Equal(t, "1", exp.Right.TokenLiteral())
 }
+
+func TestIncrementDecrement(t *testing.T) {
+	input := `int x = 0;
+	x++;
+	--x;`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equalf(t, 3, len(program.Statements), "expected three statements in program, got %d", len(program.Statements))
+
+	stmt, ok := program.Statements[1].(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+	exp, ok := stmt.Expression.(*ast.PostfixExpression)
+	assert.True(t, ok, "could not cast expression to PostFixExpression")
+	assert.Equal(t, "++", exp.Operator)
+	assert.Equal(t, "x", exp.Left.TokenLiteral())
+
+	stmt, ok = program.Statements[2].(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement")
+
+	preExp, ok := stmt.Expression.(*ast.PrefixExpression)
+	assert.True(t, ok, "could not cast expression to PostFixExpression")
+	assert.Equal(t, "--", preExp.Operator)
+	assert.Equal(t, "x", preExp.Right.TokenLiteral())
+}
