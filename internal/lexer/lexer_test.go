@@ -201,3 +201,26 @@ func TestIfElseStatements(t *testing.T) {
 		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
 }
+
+func TestLoopStatements(t *testing.T) {
+	input := `for
+	while
+	do`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TokenFor, "for"},
+		{lexer.TokenWhile, "while"},
+		{lexer.TokenDo, "do"},
+	}
+
+	l := lexer.New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
+	}
+}
