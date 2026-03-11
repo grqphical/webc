@@ -29,11 +29,15 @@ const (
 )
 
 const (
+	OpCodeBlock        byte = 0x02
+	OpCodeLoop         byte = 0x03
 	OpCodeEnd          byte = 0x0B
 	OpCodeReturn       byte = 0x0F
 	OpCodeCallFunction byte = 0x10
 	OpCodeIf           byte = 0x04
 	OpCodeElse         byte = 0x05
+	OpCodeBrIf         byte = 0x0D
+	OpCodeBr           byte = 0x0C
 
 	OpCodeDrop byte = 0x1A
 
@@ -592,6 +596,29 @@ func (m *WASMModule) generateVariableUpdate(stmt *ast.VariableUpdateStatement, f
 	return nil
 }
 
+func (m *WASMModule) generateWhileLoop(stmt *ast.WhileLoopStatement, funcBody *bytes.Buffer) error {
+	funcBody.WriteByte(OpCodeBlock)
+	funcBody.WriteByte(0x40)
+
+	funcBody.WriteByte(OpCodeLoop)
+	funcBody.WriteByte(0x40)
+
+	m.generateExpressionCode(stmt.Condition, funcBody)
+	funcBody.WriteByte(OpCodeI32EqualsZero) // NOT
+	funcBody.WriteByte(OpCodeBrIf)
+	funcBody.Write(EncodeULEB128(1))
+
+	m.generateStatement(stmt.Statement, funcBody)
+
+	funcBody.WriteByte(OpCodeBr)
+	funcBody.Write(EncodeULEB128(0))
+
+	funcBody.WriteByte(OpCodeEnd)
+	funcBody.WriteByte(OpCodeEnd)
+
+	return nil
+}
+
 func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffer) error {
 	switch s := stmt.(type) {
 	case *ast.VariableDefineStatement:
@@ -627,6 +654,8 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 			}
 		}
 		return nil
+	case *ast.WhileLoopStatement:
+		return m.generateWhileLoop(s, funcBody)
 	default:
 		return fmt.Errorf("unknown statement type '%s'", s.String())
 	}
