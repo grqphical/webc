@@ -450,7 +450,6 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
 				funcBody.WriteByte(OpCodeF32Division)
 			}
-		// since we push the left side first, we need to use the opposite logical operation (i.e. use less than when greater than sign is used)
 		case "==":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
 				funcBody.WriteByte(OpCodeI32Eq)
@@ -459,16 +458,16 @@ func (m *WASMModule) generateExpressionCode(exp ast.Expression, funcBody *bytes.
 			}
 		case "<=":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
-				funcBody.WriteByte(OpCodeI32GreaterThanEqualSigned)
+				funcBody.WriteByte(OpCodeI32LessThanEqualSigned)
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
-				funcBody.WriteByte(OpCodeF32GreaterThanEqual)
+				funcBody.WriteByte(OpCodeF32LessThanEqual)
 			}
 
 		case ">=":
 			if e.Left.ValueType() == ast.ValueTypeInt || e.Left.ValueType() == ast.ValueTypeChar {
-				funcBody.WriteByte(OpCodeI32LessThanEqualSigned)
+				funcBody.WriteByte(OpCodeI32GreaterThanEqualSigned)
 			} else if e.Left.ValueType() == ast.ValueTypeFloat {
-				funcBody.WriteByte(OpCodeF32LessThanEqual)
+				funcBody.WriteByte(OpCodeF32GreaterThanEqual)
 			}
 
 		case "!=":
@@ -597,22 +596,15 @@ func (m *WASMModule) generateVariableUpdate(stmt *ast.VariableUpdateStatement, f
 }
 
 func (m *WASMModule) generateWhileLoop(stmt *ast.WhileLoopStatement, funcBody *bytes.Buffer) error {
-	funcBody.WriteByte(OpCodeBlock)
-	funcBody.WriteByte(0x40)
-
 	funcBody.WriteByte(OpCodeLoop)
 	funcBody.WriteByte(0x40)
 
-	m.generateExpressionCode(stmt.Condition, funcBody)
-	funcBody.WriteByte(OpCodeBrIf)
-	funcBody.Write(EncodeULEB128(1))
-
 	m.generateStatement(stmt.Statement, funcBody)
 
-	funcBody.WriteByte(OpCodeBr)
+	m.generateExpressionCode(stmt.Condition, funcBody)
+	funcBody.WriteByte(OpCodeBrIf)
 	funcBody.Write(EncodeULEB128(0))
 
-	funcBody.WriteByte(OpCodeEnd)
 	funcBody.WriteByte(OpCodeEnd)
 
 	return nil
