@@ -604,7 +604,6 @@ func (m *WASMModule) generateWhileLoop(stmt *ast.WhileLoopStatement, funcBody *b
 	funcBody.WriteByte(0x40)
 
 	m.generateExpressionCode(stmt.Condition, funcBody)
-	funcBody.WriteByte(OpCodeI32EqualsZero) // NOT
 	funcBody.WriteByte(OpCodeBrIf)
 	funcBody.Write(EncodeULEB128(1))
 
