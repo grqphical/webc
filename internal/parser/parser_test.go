@@ -558,3 +558,30 @@ func TestIncrementDecrement(t *testing.T) {
 	assert.Equal(t, "--", preExp.Operator)
 	assert.Equal(t, "x", preExp.Right.TokenLiteral())
 }
+
+func TestWhileLoop(t *testing.T) {
+	input := `while (1 > 0) {
+		int x = 0;
+	}`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equalf(t, 1, len(program.Statements), "expected one statement in program, got %d", len(program.Statements))
+
+	stmt, ok := program.Statements[0].(*ast.WhileLoopStatement)
+	assert.True(t, ok, "could not cast statement to WhileLoopStatement, got %T instead", program.Statements[0])
+
+	exp, ok := stmt.Condition.(*ast.InfixExpression)
+	assert.True(t, ok, "could not cast expression to InfixExpression, got %T instead", stmt.Condition)
+	assert.Equal(t, "1", exp.Left.String())
+	assert.Equal(t, "0", exp.Right.String())
+	assert.Equal(t, ">", exp.Operator)
+
+	blockStmt, ok := stmt.Statement.(*ast.BlockStatement)
+	assert.True(t, ok, "could not cast statement to BlockStatement, got %T instead", stmt.Statement)
+	assert.Equal(t, 1, len(blockStmt.Statements))
+}

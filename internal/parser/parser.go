@@ -193,6 +193,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseReturnStatement()
 	case lexer.TokenIf:
 		return p.parseIfStatement()
+	case lexer.TokenWhile:
+		return p.parseWhileLoop()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -222,6 +224,26 @@ func (p *Parser) parseBlock() ast.Statement {
 	}
 
 	return block
+}
+
+func (p *Parser) parseWhileLoop() ast.Statement {
+	stmt := &ast.WhileLoopStatement{
+		Token: p.curToken,
+	}
+
+	if !p.expectPeek(lexer.TokenLParen) {
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Condition = p.parseExpression(PrecendenceLowest)
+	if !p.expectPeek(lexer.TokenRParen) {
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Statement = p.parseStatement()
+	return stmt
 }
 
 func (p *Parser) parseVariableUpdateStatement() ast.Statement {
