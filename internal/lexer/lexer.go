@@ -178,6 +178,10 @@ func (l *Lexer) NextToken() Token {
 			ch := l.ch
 			l.readChar()
 			tok = newToken(TokenPlusEqual, string(ch)+string(l.ch), l.lineCount)
+		} else if l.peekChar() == '+' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TokenIncrement, string(ch)+string(l.ch), l.lineCount)
 		} else {
 			tok = newToken(TokenPlus, string(l.ch), l.lineCount)
 		}
@@ -186,6 +190,10 @@ func (l *Lexer) NextToken() Token {
 			ch := l.ch
 			l.readChar()
 			tok = newToken(TokenMinusEqual, string(ch)+string(l.ch), l.lineCount)
+		} else if l.peekChar() == '-' {
+			ch := l.ch
+			l.readChar()
+			tok = newToken(TokenDecrement, string(ch)+string(l.ch), l.lineCount)
 		} else {
 			tok = newToken(TokenDash, string(l.ch), l.lineCount)
 		}

@@ -18,6 +18,7 @@ const (
 	PrecedenceProduct
 	PrecedencePrefix
 	PrecedenceCall
+	PrecedencePostFix
 )
 
 var precedenceLookup = map[lexer.TokenType]int{
@@ -32,6 +33,8 @@ var precedenceLookup = map[lexer.TokenType]int{
 	lexer.TokenLessThan:       PrecedenceLessGreater,
 	lexer.TokenEqualEqual:     PrecedenceLessGreater,
 	lexer.TokenNotEqual:       PrecedenceLessGreater,
+	lexer.TokenIncrement:      PrecedencePostFix,
+	lexer.TokenDecrement:      PrecedencePostFix,
 }
 
 type (
@@ -86,6 +89,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.TokenDash, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TokenBang, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TokenLParen, p.parseGroupedExpression)
+	p.registerPrefix(lexer.TokenIncrement, p.parsePrefixExpression)
+	p.registerPrefix(lexer.TokenDecrement, p.parsePrefixExpression)
 
 	p.infixParseFns = make(map[lexer.TokenType]infixParseFn)
 	p.registerInfix(lexer.TokenPlus, p.parseInfixExpression)
@@ -97,6 +102,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.TokenGreaterOrEqual, p.parseInfixExpression)
 	p.registerInfix(lexer.TokenLessOrEqual, p.parseInfixExpression)
 	p.registerInfix(lexer.TokenEqualEqual, p.parseInfixExpression)
+	p.registerInfix(lexer.TokenIncrement, p.parsePostfixExpression)
+	p.registerInfix(lexer.TokenDecrement, p.parsePostfixExpression)
 
 	return p
 }
@@ -186,6 +193,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseReturnStatement()
 	case lexer.TokenIf:
 		return p.parseIfStatement()
+	case lexer.TokenWhile:
+		return p.parseWhileLoop()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -215,6 +224,26 @@ func (p *Parser) parseBlock() ast.Statement {
 	}
 
 	return block
+}
+
+func (p *Parser) parseWhileLoop() ast.Statement {
+	stmt := &ast.WhileLoopStatement{
+		Token: p.curToken,
+	}
+
+	if !p.expectPeek(lexer.TokenLParen) {
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Condition = p.parseExpression(PrecendenceLowest)
+	if !p.expectPeek(lexer.TokenRParen) {
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Statement = p.parseStatement()
+	return stmt
 }
 
 func (p *Parser) parseVariableUpdateStatement() ast.Statement {
@@ -425,6 +454,25 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	return leftExp
 }
 
+func (p *Parser) parsePostfixExpression(left ast.Expression) ast.Expression {
+	_, ok := left.(*ast.Identifier)
+	if !ok {
+		p.errors = append(p.errors, ParseError{
+			line:    p.curToken.Line,
+			message: "cannot apply postfix operator on non variable",
+		})
+		return nil
+	}
+
+	expression := &ast.PostfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     left,
+	}
+
+	return expression
+}
+
 func (p *Parser) parseExpressionStatement() ast.Statement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
@@ -486,6 +534,17 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	p.nextToken()
 
 	expression.Right = p.parseExpression(PrecedencePrefix)
+
+	if p.curToken.Literal == "++" || p.curToken.Literal == "--" {
+		_, ok := expression.Right.(*ast.Identifier)
+		if !ok {
+			p.errors = append(p.errors, ParseError{
+				line:    p.curToken.Line,
+				message: "cannot apply postfix operator on non variable",
+			})
+			return nil
+		}
+	}
 
 	return expression
 }

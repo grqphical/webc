@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/grqphical/webc/internal/lexer"
 )
@@ -429,4 +430,39 @@ func (fce *FunctionCallExpression) String() string {
 
 func (fce *FunctionCallExpression) ValueType() ValueType {
 	return fce.ReturnType
+}
+
+type PostfixExpression struct {
+	Token    lexer.Token
+	Left     Expression
+	Operator string
+}
+
+func (pe *PostfixExpression) expressionNode()      {}
+func (pe *PostfixExpression) TokenLiteral() string { return pe.Token.Literal }
+func (pe *PostfixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(pe.Left.String())
+	out.WriteString(pe.Operator)
+	out.WriteString(")")
+	return out.String()
+}
+func (pe *PostfixExpression) ValueType() ValueType {
+	return pe.Left.ValueType()
+}
+
+type WhileLoopStatement struct {
+	Token     lexer.Token
+	Condition Expression
+	Statement Statement
+}
+
+func (ws *WhileLoopStatement) statementNode()       {}
+func (ws *WhileLoopStatement) TokenLiteral() string { return ws.Token.Literal }
+func (ws *WhileLoopStatement) String() string {
+	return fmt.Sprintf("while (%s) %s", ws.Condition.String(), ws.Statement.String())
+}
+func (ws *WhileLoopStatement) ValueType() ValueType {
+	return ws.Condition.ValueType()
 }

@@ -33,13 +33,14 @@ You can use the `-o` flag to change where the output binary will be.
 - [x] Floating point variables, arthimetic, and variable modification
 - [x] Character variables, arthimetic, and variable modification
 - [x] Constant variables
+- [x] ++ and -- operators
 - [ ] Long (64 bit Integer) variables, arthimetic, and variable modification
 - [ ] Unsigned Integer/Long variables, arthimetic, and variable modification
 - [x] If Statements
 - [x] Else Statements
 - [x] Else If Statements
 - [ ] For Loops
-- [ ] While loops
+- [x] While loops
 - [x] Functions
 - [x] Basic Preprocessor (include, define, ifdef, ifndef)
 - [ ] Advanced Preprocessor (macros, full if statements, etc.)

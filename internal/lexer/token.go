@@ -34,6 +34,8 @@ const (
 	TokenLessOrEqual    TokenType = "<="
 	TokenGreaterOrEqual TokenType = ">="
 	TokenEqualEqual     TokenType = "=="
+	TokenIncrement      TokenType = "++"
+	TokenDecrement      TokenType = "--"
 
 	TokenIntKeyword   TokenType = "int"
 	TokenFloatKeyword TokenType = "float"
@@ -44,6 +46,9 @@ const (
 	TokenVoid         TokenType = "void"
 	TokenIf           TokenType = "if"
 	TokenElse         TokenType = "else"
+	TokenFor          TokenType = "for"
+	TokenWhile        TokenType = "while"
+	TokenDo           TokenType = "do"
 
 	TokenEndOfFile TokenType = "EOF"
 	TokenIllegal   TokenType = "ILLEGAL"
@@ -59,6 +64,9 @@ var keywords = map[string]TokenType{
 	"void":   TokenVoid,
 	"if":     TokenIf,
 	"else":   TokenElse,
+	"for":    TokenFor,
+	"while":  TokenWhile,
+	"do":     TokenDo,
 }
 
 func lookupIdent(ident string) TokenType {

@@ -9,14 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIfElseIfStatements(t *testing.T) {
+func TestWhileLoop(t *testing.T) {
 	source := `int main() {
 		int x = 0;
 
-		if (5 < 4) {
-			x = 6;
-		} else if (4 < 5) {
-			x = 5; 
+		while (x < 5) {
+			x += 1;
 		}
 
 		return x;
@@ -31,20 +29,18 @@ func TestIfElseIfStatements(t *testing.T) {
 	module := codegen.NewModule(program)
 	err := module.Generate()
 	assert.NoError(t, err)
-	err = module.Save("temp/if_else_statement.wasm")
+	err = module.Save("temp/while_loop.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/if_else_statement.wasm", "main", 5, ExpectedOutputI32)
+	AssertWASMBinary(t, "temp/while_loop.wasm", "main", 5, ExpectedOutputI32)
 }
 
-func TestIfElseIfWithLessOrEqualStatements(t *testing.T) {
+func TestWhileLoopWithEqOperator(t *testing.T) {
 	source := `int main() {
-		int x = 5;
+		int x = 0;
 
-		if (x <= 5) {
-			x = 6;
-		} else if (4 < 5) {
-			x = 4; 
+		while (x <= 5) {
+			x += 1;
 		}
 
 		return x;
@@ -59,8 +55,8 @@ func TestIfElseIfWithLessOrEqualStatements(t *testing.T) {
 	module := codegen.NewModule(program)
 	err := module.Generate()
 	assert.NoError(t, err)
-	err = module.Save("temp/if_else_lt_eq_statement.wasm")
+	err = module.Save("temp/while_loop_equal.wasm")
 	assert.NoError(t, err)
 
-	AssertWASMBinary(t, "temp/if_else_lt_eq_statement.wasm", "main", 6, ExpectedOutputI32)
+	AssertWASMBinary(t, "temp/while_loop_equal.wasm", "main", 6, ExpectedOutputI32)
 }
