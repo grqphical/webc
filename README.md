@@ -40,7 +40,7 @@ You can use the `-o` flag to change where the output binary will be.
 - [x] Else Statements
 - [x] Else If Statements
 - [ ] For Loops
-- [ ] While loops
+- [x] While loops
 - [x] Functions
 - [x] Basic Preprocessor (include, define, ifdef, ifndef)
 - [ ] Advanced Preprocessor (macros, full if statements, etc.)
