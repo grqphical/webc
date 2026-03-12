@@ -40,6 +40,7 @@ const (
 	TokenIntKeyword   TokenType = "int"
 	TokenFloatKeyword TokenType = "float"
 	TokenCharKeyword  TokenType = "char"
+	TokenLongKeyword  TokenType = "long"
 	TokenReturn       TokenType = "return"
 	TokenConst        TokenType = "const"
 	TokenExtern       TokenType = "extern"
@@ -67,6 +68,7 @@ var keywords = map[string]TokenType{
 	"for":    TokenFor,
 	"while":  TokenWhile,
 	"do":     TokenDo,
+	"long":   TokenLongKeyword,
 }
 
 func lookupIdent(ident string) TokenType {
