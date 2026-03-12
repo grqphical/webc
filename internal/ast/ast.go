@@ -13,6 +13,7 @@ const (
 	ValueTypeInt   ValueType = "int"
 	ValueTypeFloat ValueType = "float"
 	ValueTypeChar  ValueType = "char"
+	ValueTypeLong  ValueType = "long"
 	ValueTypeVoid  ValueType = "void"
 )
 
