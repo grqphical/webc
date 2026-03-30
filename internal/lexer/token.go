@@ -2,6 +2,7 @@ package lexer
 
 type TokenType string
 
+// All tokens the lexer can read
 const (
 	TokenIdent TokenType = "IDENTIFIER"
 
@@ -54,6 +55,7 @@ const (
 	TokenIllegal   TokenType = "ILLEGAL"
 )
 
+// Every keyword the lexer can recognize
 var keywords = map[string]TokenType{
 	"int":    TokenIntKeyword,
 	"float":  TokenFloatKeyword,
@@ -69,6 +71,8 @@ var keywords = map[string]TokenType{
 	"do":     TokenDo,
 }
 
+// Looks up an identifier to see if it's a keyword, if it is return the keyword token
+// Otherwise return a generic TokenIdent
 func lookupIdent(ident string) TokenType {
 	if tok, ok := keywords[ident]; ok {
 		return tok
@@ -76,6 +80,7 @@ func lookupIdent(ident string) TokenType {
 	return TokenIdent
 }
 
+// Represents a token in the lexer
 type Token struct {
 	Type    TokenType
 	Literal string

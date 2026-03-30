@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// processes file paths used in #include statements, handling both <> and ""
 func parseIncludePath(path string) (string, error) {
 	file := ""
 	endChar := '<'
@@ -27,6 +28,7 @@ func parseIncludePath(path string) (string, error) {
 	return file, nil
 }
 
+// Struct to store the state of the preprocessor
 type Preprocessor struct {
 	Definitions       map[string]string
 	includeStatements bool
@@ -52,6 +54,7 @@ func New(templateFS embed.FS) *Preprocessor {
 	}
 }
 
+// Runs the pre-processor on the given source code
 func (p *Preprocessor) Parse(sourceCode string) (string, error) {
 	finalSource := ""
 	for _, line := range strings.Split(sourceCode, "\n") {

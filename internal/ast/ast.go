@@ -7,6 +7,8 @@ import (
 	"github.com/grqphical/webc/internal/lexer"
 )
 
+// Represents a type within the C programming language
+// Used mainly for storing return types of functions and statements within the AST
 type ValueType string
 
 const (
@@ -16,23 +18,31 @@ const (
 	ValueTypeVoid  ValueType = "void"
 )
 
+// Represents a Node in the Abstract Syntax Tree
 type Node interface {
+	// Returns the TokenLiteral of the AST Node
 	TokenLiteral() string
+	// Returns a string representation of the AST Node
 	String() string
+	// Returns the type of the AST Node
 	ValueType() ValueType
 }
 
+// Represents a statement node (e.g. variable declaration, if statement etc.) in the AST
 type Statement interface {
 	Node
 	statementNode()
 }
 
+// Represents an expression (e.g. 5 < 2, 6 + 7, 5 * (3 + 5))
 type Expression interface {
 	Node
 	expressionNode()
 }
 
+// Stores the entire program and it's AST
 type Program struct {
+	// Every function declared
 	Functions []*Function
 
 	// Functions to be imported from JS
@@ -77,11 +87,13 @@ func (p *Program) FunctionExists(name string) int {
 	return -1
 }
 
+// Represents an argument for a function
 type Argument struct {
 	Name string
 	Type ValueType
 }
 
+// Represents a function in the program
 type Function struct {
 	Name            string
 	ReturnType      ValueType
@@ -121,6 +133,7 @@ func (f *Function) ValueType() ValueType {
 	return f.ReturnType
 }
 
+// Gets the number of variables based on each main type, used to generate WASM locals to store the variables in
 func (f *Function) GetVariableCounts() (integerCount, floatCount int) {
 	for _, s := range f.Symbols {
 		switch s.Type {
@@ -135,6 +148,7 @@ func (f *Function) GetVariableCounts() (integerCount, floatCount int) {
 	return
 }
 
+// Registers a variable within the program
 func (f *Function) SetSymbol(name string, t ValueType, constant bool) *Symbol {
 	idx := len(f.Symbols)
 	s := &Symbol{
@@ -147,6 +161,7 @@ func (f *Function) SetSymbol(name string, t ValueType, constant bool) *Symbol {
 	return s
 }
 
+// Retrieves the symbol for the given variable name
 func (f *Function) GetSymbol(name string) *Symbol {
 	idx, ok := f.SymbolIndex[name]
 	if !ok {
@@ -155,12 +170,14 @@ func (f *Function) GetSymbol(name string) *Symbol {
 	return f.Symbols[idx]
 }
 
+// Represents a defiend symbol such as a variable name
 type Symbol struct {
 	Index    int
 	Type     ValueType
 	Constant bool
 }
 
+// Represents an identifier expression (e.g. using a variable in an expression)
 type Identifier struct {
 	Token  lexer.Token
 	Value  string
@@ -180,6 +197,7 @@ func (i *Identifier) ValueType() ValueType {
 	return i.Symbol.Type
 }
 
+// Represents a block of code contained within {}
 type BlockStatement struct {
 	Token      lexer.Token
 	Statements []Statement
@@ -196,6 +214,7 @@ func (bs *BlockStatement) String() string {
 }
 func (bs *BlockStatement) ValueType() ValueType { return ValueTypeVoid }
 
+// Represents a statement that defines a variable (e.g. int x = 0;)
 type VariableDefineStatement struct {
 	Token lexer.Token
 	Name  *Identifier
@@ -228,6 +247,7 @@ func (vds *VariableDefineStatement) ValueType() ValueType {
 	return vds.Type
 }
 
+// Represents a statement that defines a variable (e.g. x = 5; x += 6;)
 type VariableUpdateStatement struct {
 	Name      *Identifier
 	Token     lexer.Token
@@ -256,6 +276,7 @@ func (vus *VariableUpdateStatement) ValueType() ValueType {
 	return vus.Name.Symbol.Type
 }
 
+// Represents a statement that returns a value from a function
 type ReturnStatement struct {
 	Token       lexer.Token
 	ReturnValue Expression
@@ -284,6 +305,7 @@ func (rs *ReturnStatement) ValueType() ValueType {
 	return rs.ReturnValue.ValueType()
 }
 
+// Represents an if statement in the AST
 type IfStatement struct {
 	Token       lexer.Token
 	Condition   Expression
@@ -307,6 +329,7 @@ func (i *IfStatement) ValueType() ValueType {
 	return i.Condition.ValueType()
 }
 
+// Represents a standalone expression statement
 type ExpressionStatement struct {
 	Token      lexer.Token
 	Expression Expression
@@ -325,6 +348,7 @@ func (es *ExpressionStatement) ValueType() ValueType {
 	return es.Expression.ValueType()
 }
 
+// Represents a literal integer (e.g. 5, 682329, -2198)
 type IntegerLiteral struct {
 	Token lexer.Token
 	Value int64
@@ -336,6 +360,7 @@ func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string       { return il.Token.Literal }
 func (il *IntegerLiteral) ValueType() ValueType { return il.Type }
 
+// Represents a literal float (e.g. 5.0, 3.14159, -0.56791)
 type FloatLiteral struct {
 	Token lexer.Token
 	Value float64
@@ -347,6 +372,7 @@ func (fl *FloatLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FloatLiteral) String() string       { return fl.Token.Literal }
 func (fl *FloatLiteral) ValueType() ValueType { return fl.Type }
 
+// Represents a character literal (e.g. 'a', 'b', '\n')
 type CharLiteral struct {
 	Token lexer.Token
 	Value byte
@@ -357,6 +383,7 @@ func (cl *CharLiteral) TokenLiteral() string { return cl.Token.Literal }
 func (cl *CharLiteral) String() string       { return cl.Token.Literal }
 func (fl *CharLiteral) ValueType() ValueType { return ValueTypeChar }
 
+// Represents an expression with a prefix operator (e.g. -5, +6)
 type PrefixExpression struct {
 	Token    lexer.Token
 	Operator string
@@ -380,6 +407,7 @@ func (pe *PrefixExpression) ValueType() ValueType {
 	return pe.Right.ValueType()
 }
 
+// Represents an expression with an operator and two values (e.g. 5 + 6)
 type InfixExpression struct {
 	Token    lexer.Token
 	Left     Expression
@@ -405,6 +433,7 @@ func (ie *InfixExpression) ValueType() ValueType {
 	return ie.Left.ValueType()
 }
 
+// Represents a call to a function in an expression
 type FunctionCallExpression struct {
 	Token      lexer.Token
 	Name       string
@@ -432,6 +461,7 @@ func (fce *FunctionCallExpression) ValueType() ValueType {
 	return fce.ReturnType
 }
 
+// Represents an expression with it's operator on the right side (e.g. 5++, i--)
 type PostfixExpression struct {
 	Token    lexer.Token
 	Left     Expression
@@ -452,6 +482,7 @@ func (pe *PostfixExpression) ValueType() ValueType {
 	return pe.Left.ValueType()
 }
 
+// Represents a while loop
 type WhileLoopStatement struct {
 	Token     lexer.Token
 	Condition Expression
@@ -467,12 +498,13 @@ func (ws *WhileLoopStatement) ValueType() ValueType {
 	return ws.Condition.ValueType()
 }
 
+// Represents a for loop
 type ForLoopStatement struct {
 	Token     lexer.Token
-	Initial   Statement
-	Condition Expression
-	Increment Expression
-	Statement Statement
+	Initial   Statement  // initial statement (e.g. int i = 0;)
+	Condition Expression // stopping condition (e.g. i < 10;)
+	Increment Expression // code to run every iteration (e.g. i++)
+	Statement Statement  // actual code to run throughout the loop
 }
 
 func (fs *ForLoopStatement) statementNode()       {}

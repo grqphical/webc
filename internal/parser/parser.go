@@ -21,6 +21,7 @@ const (
 	PrecedencePostFix
 )
 
+// table to lookup what each token's precedence (order of operations) is
 var precedenceLookup = map[lexer.TokenType]int{
 	lexer.TokenPlus:           PrecedenceSum,
 	lexer.TokenDash:           PrecedenceSum,
@@ -42,6 +43,7 @@ type (
 	infixParseFn  func(ast.Expression) ast.Expression
 )
 
+// Represents an error that occured while parsing
 type ParseError struct {
 	message string
 	line    int
@@ -51,6 +53,7 @@ func (pe ParseError) Error() string {
 	return fmt.Sprintf("SyntaxError: %s, line: %d", pe.message, pe.line)
 }
 
+// The parser itself. Stores the current state of the parser
 type Parser struct {
 	l *lexer.Lexer
 
@@ -108,6 +111,7 @@ func New(l *lexer.Lexer) *Parser {
 	return p
 }
 
+// Returns any errors that occured during parsing
 func (p *Parser) Errors() []ParseError {
 	return p.errors
 }
@@ -696,12 +700,14 @@ func (p *Parser) parseFunction(extern bool) *ast.Function {
 	return function
 }
 
+// Check if the token is the keyword for a type. Used for variable and function declarations
 func (p *Parser) isTypeKeyword(t lexer.TokenType) bool {
 	return t == lexer.TokenIntKeyword ||
 		t == lexer.TokenFloatKeyword ||
 		t == lexer.TokenCharKeyword || t == lexer.TokenVoid
 }
 
+// Parses the entire program, returning the abstract syntax tree
 func (p *Parser) ParseProgram() *ast.Program {
 	p.program = &ast.Program{}
 	p.program.Functions = make([]*ast.Function, 0)
