@@ -195,6 +195,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseIfStatement()
 	case lexer.TokenWhile:
 		return p.parseWhileLoop()
+	case lexer.TokenFor:
+		return p.parseForLoop()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -243,6 +245,55 @@ func (p *Parser) parseWhileLoop() ast.Statement {
 	p.nextToken()
 
 	stmt.Statement = p.parseStatement()
+	return stmt
+}
+
+func (p *Parser) parseForLoop() ast.Statement {
+	stmt := &ast.ForLoopStatement{
+		Token: p.curToken,
+	}
+
+	if !p.expectPeek(lexer.TokenLParen) {
+		return nil
+	}
+	p.nextToken()
+
+	if p.curTokenIs(lexer.TokenSemicolon) {
+		stmt.Initial = nil
+	} else {
+		stmt.Initial = p.parseStatement()
+		if !p.curTokenIs(lexer.TokenSemicolon) {
+			p.errors = append(p.errors, ParseError{
+				message: fmt.Sprintf("expected semicolon, got %s", p.curToken.Literal),
+				line:    p.curToken.Line,
+			})
+			return nil
+		}
+	}
+	p.nextToken()
+
+	if p.curTokenIs(lexer.TokenSemicolon) {
+		stmt.Condition = nil
+	} else {
+		stmt.Condition = p.parseExpression(PrecendenceLowest)
+		if !p.expectPeek(lexer.TokenSemicolon) {
+			return nil
+		}
+	}
+	p.nextToken() // Move past the semicolon to the increment
+
+	if p.curTokenIs(lexer.TokenRParen) {
+		stmt.Increment = nil
+	} else {
+		stmt.Increment = p.parseExpression(PrecendenceLowest)
+		if !p.expectPeek(lexer.TokenRParen) {
+			return nil
+		}
+	}
+	p.nextToken() // Move past the ')' to the body block
+
+	stmt.Statement = p.parseStatement()
+
 	return stmt
 }
 
