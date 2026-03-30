@@ -33,7 +33,7 @@ build:
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) .
 
 # Runs the formatters
-.PHONY: foramt
+.PHONY: format
 format:
 	@go fmt ./...
 
