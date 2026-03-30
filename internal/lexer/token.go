@@ -80,6 +80,7 @@ func lookupIdent(ident string) TokenType {
 	return TokenIdent
 }
 
+// Represents a token in the lexer
 type Token struct {
 	Type    TokenType
 	Literal string
