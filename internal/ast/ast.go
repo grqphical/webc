@@ -470,8 +470,8 @@ func (ws *WhileLoopStatement) ValueType() ValueType {
 type ForLoopStatement struct {
 	Token     lexer.Token
 	Initial   Statement
-	Condition Statement
-	Increment Statement
+	Condition Expression
+	Increment Expression
 	Statement Statement
 }
 

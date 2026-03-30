@@ -610,6 +610,25 @@ func (m *WASMModule) generateWhileLoop(stmt *ast.WhileLoopStatement, funcBody *b
 	return nil
 }
 
+func (m *WASMModule) generateForLoop(stmt *ast.ForLoopStatement, funcBody *bytes.Buffer) error {
+	m.generateStatement(stmt.Initial, funcBody)
+
+	funcBody.WriteByte(OpCodeLoop)
+	funcBody.WriteByte(0x40)
+
+	m.generateStatement(stmt.Statement, funcBody)
+	m.generateExpressionCode(stmt.Increment, funcBody)
+
+	m.generateExpressionCode(stmt.Condition, funcBody)
+	funcBody.WriteByte(OpCodeBrIf)
+	funcBody.Write(EncodeULEB128(0))
+	funcBody.WriteByte(OpCodeDrop)
+
+	funcBody.WriteByte(OpCodeEnd)
+
+	return nil
+}
+
 func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffer) error {
 	switch s := stmt.(type) {
 	case *ast.VariableDefineStatement:
@@ -647,6 +666,8 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 		return nil
 	case *ast.WhileLoopStatement:
 		return m.generateWhileLoop(s, funcBody)
+	case *ast.ForLoopStatement:
+		return m.generateForLoop(s, funcBody)
 	default:
 		return fmt.Errorf("unknown statement type '%s'", s.String())
 	}

@@ -607,19 +607,13 @@ func TestForLoop(t *testing.T) {
 	assert.Equal(t, "i", initStmt.Name.String())
 	assert.Equal(t, "0", initStmt.Value.String())
 
-	condStmt, ok := stmt.Condition.(*ast.ExpressionStatement)
-	assert.True(t, ok, "could not cast statement to ExpressionStatement, got %T instead", stmt.Condition)
-
-	condExp, ok := condStmt.Expression.(*ast.InfixExpression)
+	condExp, ok := stmt.Condition.(*ast.InfixExpression)
 	assert.True(t, ok, "could not cast expression to InfixExpression, got %T instead", stmt.Condition)
 	assert.Equal(t, "i", condExp.Left.String())
 	assert.Equal(t, "10", condExp.Right.String())
 	assert.Equal(t, "<", condExp.Operator)
 
-	incrementStmt, ok := stmt.Increment.(*ast.ExpressionStatement)
-	assert.True(t, ok, "could not cast statement to ExpressionStatement, got %T instead", stmt.Condition)
-	incrementExp, ok := incrementStmt.Expression.(*ast.PostfixExpression)
-
+	incrementExp, ok := stmt.Increment.(*ast.PostfixExpression)
 	assert.True(t, ok, "could not cast expression to PostfixExpression, got %T instead", stmt.Condition)
 	assert.Equal(t, "i", incrementExp.Left.String())
 	assert.Equal(t, "++", incrementExp.Operator)
