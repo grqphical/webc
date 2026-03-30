@@ -466,3 +466,20 @@ func (ws *WhileLoopStatement) String() string {
 func (ws *WhileLoopStatement) ValueType() ValueType {
 	return ws.Condition.ValueType()
 }
+
+type ForLoopStatement struct {
+	Token     lexer.Token
+	Initial   Statement
+	Condition Statement
+	Increment Statement
+	Statement Statement
+}
+
+func (fs *ForLoopStatement) statementNode()       {}
+func (fs *ForLoopStatement) TokenLiteral() string { return fs.Token.Literal }
+func (fs *ForLoopStatement) String() string {
+	return fmt.Sprintf("for (%s;%s;%s) %s", fs.Initial.String(), fs.Condition.String(), fs.Increment.String(), fs.Statement.String())
+}
+func (fs *ForLoopStatement) ValueType() ValueType {
+	return fs.Condition.ValueType()
+}

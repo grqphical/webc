@@ -195,6 +195,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseIfStatement()
 	case lexer.TokenWhile:
 		return p.parseWhileLoop()
+	case lexer.TokenFor:
+		return p.parseForLoop()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -243,6 +245,48 @@ func (p *Parser) parseWhileLoop() ast.Statement {
 	p.nextToken()
 
 	stmt.Statement = p.parseStatement()
+	return stmt
+}
+
+func (p *Parser) parseForLoop() ast.Statement {
+	stmt := &ast.ForLoopStatement{
+		Token: p.curToken,
+	}
+
+	if !p.expectPeek(lexer.TokenLParen) {
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Initial = p.parseStatement()
+	if !p.curTokenIs(lexer.TokenSemicolon) {
+		p.errors = append(p.errors, ParseError{
+			message: "expected semicolon",
+			line:    p.curToken.Line,
+		})
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Condition = p.parseStatement()
+	if !p.curTokenIs(lexer.TokenSemicolon) {
+		p.errors = append(p.errors, ParseError{
+			message: "expected semicolon",
+			line:    p.curToken.Line,
+		})
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Increment = p.parseStatement()
+
+	if !p.expectPeek(lexer.TokenRParen) {
+		return nil
+	}
+	p.nextToken()
+
+	stmt.Statement = p.parseStatement()
+
 	return stmt
 }
 

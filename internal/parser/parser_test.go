@@ -585,3 +585,46 @@ func TestWhileLoop(t *testing.T) {
 	assert.True(t, ok, "could not cast statement to BlockStatement, got %T instead", stmt.Statement)
 	assert.Equal(t, 1, len(blockStmt.Statements))
 }
+
+func TestForLoop(t *testing.T) {
+	input := `for (int i = 0; i < 10; i++) {
+		int x = 0;
+	}`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	assert.NotNil(t, program)
+	assert.Empty(t, p.Errors())
+
+	assert.Equalf(t, 1, len(program.Statements), "expected one statement in program, got %d", len(program.Statements))
+
+	stmt, ok := program.Statements[0].(*ast.ForLoopStatement)
+	assert.True(t, ok, "could not cast statement to ForLoopStatement, got %T instead", program.Statements[0])
+
+	initStmt, ok := stmt.Initial.(*ast.VariableDefineStatement)
+	assert.True(t, ok, "could not cast statement to VariableDefineStatement, got %T instead", stmt.Initial)
+	assert.Equal(t, "i", initStmt.Name.String())
+	assert.Equal(t, "0", initStmt.Value.String())
+
+	condStmt, ok := stmt.Condition.(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement, got %T instead", stmt.Condition)
+
+	condExp, ok := condStmt.Expression.(*ast.InfixExpression)
+	assert.True(t, ok, "could not cast expression to InfixExpression, got %T instead", stmt.Condition)
+	assert.Equal(t, "i", condExp.Left.String())
+	assert.Equal(t, "10", condExp.Right.String())
+	assert.Equal(t, "<", condExp.Operator)
+
+	incrementStmt, ok := stmt.Increment.(*ast.ExpressionStatement)
+	assert.True(t, ok, "could not cast statement to ExpressionStatement, got %T instead", stmt.Condition)
+	incrementExp, ok := incrementStmt.Expression.(*ast.PostfixExpression)
+
+	assert.True(t, ok, "could not cast expression to PostfixExpression, got %T instead", stmt.Condition)
+	assert.Equal(t, "i", incrementExp.Left.String())
+	assert.Equal(t, "++", incrementExp.Operator)
+
+	blockStmt, ok := stmt.Statement.(*ast.BlockStatement)
+	assert.True(t, ok, "could not cast statement to BlockStatement, got %T instead", stmt.Statement)
+	assert.Equal(t, 1, len(blockStmt.Statements))
+}
