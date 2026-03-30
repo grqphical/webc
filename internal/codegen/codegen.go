@@ -11,10 +11,12 @@ import (
 	"github.com/grqphical/webc/internal/ast"
 )
 
+// necessary for WASM binaries
 const magicNumberAndVersion = "\x00asm\x01\x00\x00\x00"
 
 const stdlibModuleName = "libc"
 
+// IDs for different sections of WASM binaries
 const (
 	SecType     byte = 1
 	SecImports  byte = 2
@@ -23,11 +25,13 @@ const (
 	SecCode     byte = 10
 )
 
+// IDs for different type IDs when creating locals
 const (
 	LocalTypeI32 byte = 0x7F
 	LocalTypeF32 byte = 0x7D
 )
 
+// WASM instructions
 const (
 	OpCodeBlock        byte = 0x02
 	OpCodeLoop         byte = 0x03
@@ -113,6 +117,7 @@ func EncodeSLEB128(n int32) []byte {
 	return res
 }
 
+// Checks if two given types are compatible to be used in expressions with each other
 func checkCompatibleTypes(left, right ast.ValueType) bool {
 	if left == right {
 		return true
@@ -128,6 +133,7 @@ func checkCompatibleTypes(left, right ast.ValueType) bool {
 	}
 }
 
+// Represents an assembled WASM program
 type WASMModule struct {
 	buffer  bytes.Buffer
 	program *ast.Program
@@ -141,12 +147,14 @@ func NewModule(program *ast.Program) *WASMModule {
 	return m
 }
 
+// Writes the given section with the given section ID to the WASM binary
 func (m *WASMModule) writeSection(id byte, payload []byte) {
 	m.buffer.WriteByte(id)
 	m.buffer.Write(EncodeULEB128(uint32(len(payload))))
 	m.buffer.Write(payload)
 }
 
+// Generates the WASM import section for loading external functions (for now just the stdlib)
 func (m *WASMModule) generateImportSection() {
 	importPayload := bytes.Buffer{}
 	importPayload.Write(EncodeULEB128(uint32(len(m.program.ExternalFunctions))))
@@ -165,6 +173,7 @@ func (m *WASMModule) generateImportSection() {
 	m.writeSection(SecImports, importPayload.Bytes())
 }
 
+// Generates the types section which defines what each function takes as arguments and returns
 func (m *WASMModule) generateTypeSection() {
 	typePayload := bytes.Buffer{}
 	typePayload.Write(EncodeULEB128(uint32(len(m.program.Functions) + len(m.program.ExternalFunctions)))) // count of types
@@ -219,6 +228,7 @@ func (m *WASMModule) generateTypeSection() {
 	m.writeSection(SecType, typePayload.Bytes())
 }
 
+// Generates the function section, defining how many functions there are defined
 func (m *WASMModule) generateFunctionSection() {
 	funcPayload := bytes.Buffer{}
 	count := uint32(len(m.program.Functions))
@@ -232,6 +242,7 @@ func (m *WASMModule) generateFunctionSection() {
 	m.writeSection(SecFunction, funcPayload.Bytes())
 }
 
+// Generates the export section, currently only used to expose the main function
 func (m *WASMModule) generateExportSection() {
 	exportPayload := bytes.Buffer{}
 	exportPayload.Write(EncodeULEB128(1)) // Number of exports
@@ -259,6 +270,7 @@ func (m *WASMModule) generateExportSection() {
 	m.writeSection(SecExport, exportPayload.Bytes())
 }
 
+// Generates the WASM code for every function and appends it to the WASM module
 func (m *WASMModule) generateCodeSection() error {
 	codePayload := bytes.Buffer{}
 	codePayload.Write(EncodeULEB128(uint32(len(m.program.Functions))))
@@ -673,6 +685,7 @@ func (m *WASMModule) generateStatement(stmt ast.Statement, funcBody *bytes.Buffe
 	}
 }
 
+// Generates the final WASM binary
 func (m *WASMModule) Generate() error {
 	m.generateTypeSection()
 	m.generateImportSection()
@@ -681,6 +694,7 @@ func (m *WASMModule) Generate() error {
 	return m.generateCodeSection()
 }
 
+// Saves the WASM binary to a file on disk
 func (m *WASMModule) Save(filename string) error {
 	return os.WriteFile(filename, m.buffer.Bytes(), 0o644)
 }
