@@ -124,14 +124,17 @@ func (p *Parser) noPrefixParseFnError(t lexer.TokenType, line int) {
 	})
 }
 
+// Registers a prefix parser function, which runs when the given token is a prefix expression (e.g. -, !)
 func (p *Parser) registerPrefix(tokenType lexer.TokenType, fn prefixParseFn) {
 	p.prefixParseFns[tokenType] = fn
 }
 
+// Registers an infix parser function, which runs when the given token is an infix expression (e.g. ==, +, >)
 func (p *Parser) registerInfix(tokenType lexer.TokenType, fn infixParseFn) {
 	p.infixParseFns[tokenType] = fn
 }
 
+// Adds an error to the parser if the next token is not the expected type
 func (p *Parser) peekError(t lexer.TokenType) {
 	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
 	p.errors = append(p.errors, ParseError{
@@ -140,6 +143,7 @@ func (p *Parser) peekError(t lexer.TokenType) {
 	})
 }
 
+// Finds the precedence of the next token
 func (p *Parser) peekPrecedence() int {
 	if p, ok := precedenceLookup[p.peekToken.Type]; ok {
 		return p
@@ -148,6 +152,7 @@ func (p *Parser) peekPrecedence() int {
 	return PrecendenceLowest
 }
 
+// Finds the precedence of the current token
 func (p *Parser) currentPrecedence() int {
 	if p, ok := precedenceLookup[p.curToken.Type]; ok {
 		return p
@@ -156,25 +161,29 @@ func (p *Parser) currentPrecedence() int {
 	return PrecendenceLowest
 }
 
+// Advances the parser
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
 	p.peekToken = p.peekToken2
 	p.peekToken2 = p.l.NextToken()
 }
 
+// Checks if the current token is equal to the given token
 func (p *Parser) curTokenIs(t lexer.TokenType) bool {
 	return p.curToken.Type == t
 }
 
+// Checks if the next token is equal to the given token
 func (p *Parser) peekTokenIs(t lexer.TokenType) bool {
 	return p.peekToken.Type == t
 }
 
-// peeks ahead by two
+// Checks if the next, next token is equal to the given token
 func (p *Parser) doublePeekTokenIs(t lexer.TokenType) bool {
 	return p.peekToken2.Type == t
 }
 
+// Similar to curTokenIs but if it's false, an error is added to the parser
 func (p *Parser) expectPeek(t lexer.TokenType) bool {
 	if p.peekTokenIs(t) {
 		p.nextToken()
@@ -185,6 +194,7 @@ func (p *Parser) expectPeek(t lexer.TokenType) bool {
 	}
 }
 
+// Parses an entire statement
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword, lexer.TokenConst:
@@ -206,6 +216,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
+// Parses a block of code, contained in {}. Used in function bodies, for loops, etc.
 func (p *Parser) parseBlock() ast.Statement {
 	block := &ast.BlockStatement{
 		Token: p.curToken,
@@ -232,6 +243,7 @@ func (p *Parser) parseBlock() ast.Statement {
 	return block
 }
 
+// Parses a C-style while loop
 func (p *Parser) parseWhileLoop() ast.Statement {
 	stmt := &ast.WhileLoopStatement{
 		Token: p.curToken,
@@ -252,6 +264,7 @@ func (p *Parser) parseWhileLoop() ast.Statement {
 	return stmt
 }
 
+// Parses a C-style for loop
 func (p *Parser) parseForLoop() ast.Statement {
 	stmt := &ast.ForLoopStatement{
 		Token: p.curToken,
@@ -301,6 +314,7 @@ func (p *Parser) parseForLoop() ast.Statement {
 	return stmt
 }
 
+// Parses a variable update statement such as x = 5; or foo += 10;
 func (p *Parser) parseVariableUpdateStatement() ast.Statement {
 	if !p.peekTokenIs(lexer.TokenEqual) && !p.peekTokenIs(lexer.TokenPlusEqual) && !p.peekTokenIs(lexer.TokenMinusEqual) && !p.peekTokenIs(lexer.TokenTimesEqual) && !p.peekTokenIs(lexer.TokenDivideEqual) {
 		return p.parseExpressionStatement()
@@ -350,6 +364,7 @@ func (p *Parser) parseVariableUpdateStatement() ast.Statement {
 	return stmt
 }
 
+// Parses a variable definition statment such as int x = 0;
 func (p *Parser) parseVariableDefineStatement() ast.Statement {
 	constant := false
 	if p.curTokenIs(lexer.TokenConst) {
@@ -367,7 +382,7 @@ func (p *Parser) parseVariableDefineStatement() ast.Statement {
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal, Symbol: p.curFunction.SetSymbol(p.curToken.Literal, t, constant)}
 
 	if p.peekTokenIs(lexer.TokenSemicolon) {
-		// just defining the variable to be uninitialized
+		// just defining the variable to be uninitialized if there is a semicolon right after the variable name
 		p.nextToken()
 		return stmt
 	}
@@ -386,6 +401,7 @@ func (p *Parser) parseVariableDefineStatement() ast.Statement {
 	return stmt
 }
 
+// Parses a return statement
 func (p *Parser) parseReturnStatement() ast.Statement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken() // consume 'return'
@@ -399,6 +415,7 @@ func (p *Parser) parseReturnStatement() ast.Statement {
 	return stmt
 }
 
+// Parses a C-Style if statement
 func (p *Parser) parseIfStatement() ast.Statement {
 	ifStmt := &ast.IfStatement{Token: p.curToken}
 
@@ -432,6 +449,7 @@ func (p *Parser) parseIfStatement() ast.Statement {
 	return ifStmt
 }
 
+// Parses an identifier such as a variable access or function call
 func (p *Parser) parseIdentifier() ast.Expression {
 	if !p.peekTokenIs(lexer.TokenLParen) {
 		// not a function call so return the identifier
@@ -487,6 +505,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 	return f
 }
 
+// Parses an expression such as 5 + 5, or foo()
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	prefix := p.prefixParseFns[p.curToken.Type]
 	if prefix == nil {
@@ -604,6 +623,7 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 	return expression
 }
 
+// Parses an expression contained within parenthesis ()
 func (p *Parser) parseGroupedExpression() ast.Expression {
 	p.nextToken() // consume the '('
 
