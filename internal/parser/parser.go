@@ -197,7 +197,7 @@ func (p *Parser) expectPeek(t lexer.TokenType) bool {
 // Parses an entire statement
 func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
-	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword, lexer.TokenConst:
+	case lexer.TokenIntKeyword, lexer.TokenFloatKeyword, lexer.TokenCharKeyword, lexer.TokenConst, lexer.TokenLong:
 		return p.parseVariableDefineStatement()
 	case lexer.TokenLBrace:
 		return p.parseBlock()

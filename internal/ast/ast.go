@@ -12,7 +12,8 @@ import (
 type ValueType string
 
 const (
-	ValueTypeInt   ValueType = "int"
+	ValueTypeInt   ValueType = "int" // 32-bit integer to make compatiblity with WASM easier, same as long. long long is 64 bit on the other hand
+	ValueTypeLong  ValueType = "long"
 	ValueTypeFloat ValueType = "float"
 	ValueTypeChar  ValueType = "char"
 	ValueTypeVoid  ValueType = "void"
