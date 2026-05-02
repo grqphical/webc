@@ -50,6 +50,7 @@ const (
 	TokenFor          TokenType = "for"
 	TokenWhile        TokenType = "while"
 	TokenDo           TokenType = "do"
+	TokenLong         TokenType = "long"
 
 	TokenEndOfFile TokenType = "EOF"
 	TokenIllegal   TokenType = "ILLEGAL"
@@ -69,6 +70,7 @@ var keywords = map[string]TokenType{
 	"for":    TokenFor,
 	"while":  TokenWhile,
 	"do":     TokenDo,
+	"long":   TokenLong,
 }
 
 // Looks up an identifier to see if it's a keyword, if it is return the keyword token

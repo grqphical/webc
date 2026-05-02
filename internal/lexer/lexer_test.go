@@ -245,3 +245,22 @@ func TestIncrementDecrement(t *testing.T) {
 		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
 	}
 }
+
+func TestLong(t *testing.T) {
+	input := `long`
+	tests := []struct {
+		expectedType    lexer.TokenType
+		expectedLiteral string
+	}{
+		{lexer.TokenLong, "long"},
+	}
+
+	l := lexer.New(input)
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		assert.Equal(t, tt.expectedType, tok.Type, "test[%d] failed: token type wrong", i)
+		assert.Equal(t, tt.expectedLiteral, tok.Literal, "test[%d] failed: token literal wrong", i)
+	}
+}
